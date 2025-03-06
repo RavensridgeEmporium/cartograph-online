@@ -1,6 +1,7 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const { v4: uuidv4 } = require('uuid'); // You'll need to install this: npm install uuid
 
 const app = express();
 const server = http.createServer(app);
@@ -41,6 +42,21 @@ io.on("connection", (socket) => {
         io.emit("dropDice", []); // Send empty dice array to clear dice
     });
 
+    // Handle dice movement
+    socket.on("moveDie", (moveData) => {
+        // Find the die in our history
+        const dieIndex = diceHistory.findIndex(die => die.id === moveData.id);
+        
+        if (dieIndex !== -1) {
+            // Update die position
+            diceHistory[dieIndex].x = moveData.x;
+            diceHistory[dieIndex].y = moveData.y;
+            
+            // Broadcast the update to all clients
+            io.emit("moveDie", diceHistory[dieIndex]);
+        }
+    });
+
     function isOverlapping(newDie, existingDice, spacing) {
         return existingDice.some(die => {
             const dx = newDie.x - die.x;
@@ -68,6 +84,7 @@ io.on("connection", (socket) => {
                 const radius = Math.random() * maxRadius;
 
                 newDie = {
+                    id: uuidv4(), // Generate unique ID for each die
                     x: mousePos.x + Math.cos(angle) * radius,
                     y: mousePos.y + Math.sin(angle) * radius,
                     size: diceSize,
