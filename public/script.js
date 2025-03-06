@@ -1,4 +1,10 @@
+let biomeCount = 0;
+let landmarkCount = 0;
+let diceSpread = 1;
 const canvas = document.getElementById("whiteboard");
+const bcount = document.getElementById("biomeCount");
+const lcount = document.getElementById("landmarkCount");
+const diceSpreadRange = document.getElementById("diceSpreadRange");
 const ctx = canvas.getContext("2d");
 const socket = io();
 let drawing = false;
@@ -7,23 +13,50 @@ let diceDropMode = false; // Starts OFF
 let draggingDice = false;
 let selectedDie = null;
 let lastX = 0, lastY = 0;
-const biomeDiceImages = [
+
+const diceImages = [
     "/dice_faces/face1.png",
     "/dice_faces/face2.png",
     "/dice_faces/face3.png",
     "/dice_faces/face4.png",
     "/dice_faces/face5.png",
-    "/dice_faces/face6.png"
+    "/dice_faces/face6.png",
+    "/dice_faces/face7.png",
+    "/dice_faces/face8.png",
+    "/dice_faces/face9.png",
+    "/dice_faces/face10.png",
+    "/dice_faces/face11.png",
+    "/dice_faces/face12.png"
 ];
 
-const landmarkDiceImages = [
-    "/dice_faces/face1.png",
-    "/dice_faces/face2.png",
-    "/dice_faces/face3.png",
-    "/dice_faces/face4.png",
-    "/dice_faces/face5.png",
-    "/dice_faces/face6.png"
-];
+
+function biomeInc() {
+    biomeCount++;
+    biomeUpdate();
+}
+
+function biomeDec() {
+    biomeCount = biomeCount > 0 ? biomeCount - 1 : 0;
+    biomeUpdate();
+}
+
+function biomeUpdate() {
+    bcount.textContent = biomeCount;
+}
+
+function landmarkInc() {
+    landmarkCount++;
+    landmarkUpdate();
+}
+
+function landmarkDec() {
+    landmarkCount = landmarkCount > 0 ? landmarkCount - 1 : 0;
+    landmarkUpdate();
+}
+
+function landmarkUpdate() {
+    lcount.textContent = landmarkCount;
+}
 
 // Local cache of dice for interaction
 let localDiceCache = [];
@@ -39,11 +72,11 @@ function resizeCanvas() {
 
 // Preload all dice images
 function preloadDiceImages() {
-    for (let i = 0; i < biomeDiceImages.length; i++) {
+    for (let i = 0; i < loadedDiceImages.length; i++) {
         const img = new Image();
-        img.src = biomeDiceImages[i];
+        img.src = loadedDiceImages[i];
         loadedDiceImages.push(img);
-    }
+    };
 }
 preloadDiceImages();
 
@@ -85,6 +118,10 @@ function getMousePos(canvas, evt) {
     };
 }
 
+diceSpreadRange.addEventListener("change", () => {
+    diceSpread = diceSpreadRange.value;
+});
+
 // Erase mode toggle
 document.getElementById("eraseMode").addEventListener("click", () => {
     erasing = !erasing;
@@ -101,7 +138,6 @@ document.getElementById("clearCanvas").addEventListener("click", () => {
 document.getElementById("toggleDiceDrop").addEventListener("click", () => {
     document.getElementById("toggleDiceDrop").textContent = diceDropMode ? "Dice Mode: OFF" : "Dice Mode: ON";
     diceDropMode = !diceDropMode;
-    console.log("Dice drop mode: ", diceDropMode);
 });
 
 // Function to draw a single die
@@ -131,7 +167,7 @@ function drawDie(die) {
     } else {
         // Fallback if image isn't loaded yet
         const img = new Image();
-        img.src = biomeDiceImages[die.value - 1];
+        img.src = diceImages[die.value - 1];
         img.onload = () => {
             ctx.drawImage(img, die.x - scaledSize / 2, die.y - scaledSize / 2, scaledSize, scaledSize);
         };
@@ -205,7 +241,10 @@ canvas.addEventListener("mousedown", (event) => {
             socket.emit("dropDice", { 
                 x: mousePos.x, 
                 y: mousePos.y,
-                size: 40 * (canvas.width / 1000) // Scale dice size based on canvas width
+                size: 40 * (canvas.width / 1000), 
+                bCount: biomeCount,
+                lCount: landmarkCount,
+                spread: diceSpread
             });
         }
     } else {

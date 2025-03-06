@@ -25,6 +25,11 @@ body {
     align-items: center;
 }
 
+button {
+    display: block;
+    margin-bottom: 10px;
+}
+
 .container {
     width: 90%;
     max-width: 1200px;
@@ -118,6 +123,16 @@ canvas {
     background-size: contain;
     opacity: 0.7;
     pointer-events: none;
+}
+
+.counter {
+    font-size: 2em;
+    margin-bottom: 20px;
+}
+
+.clicks {
+    font-size: 1.1em;
+    margin-top: 10px;
 }
 
 footer {

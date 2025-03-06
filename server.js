@@ -66,18 +66,28 @@ io.on("connection", (socket) => {
         });
     }
 
-    socket.on("dropDice", (mousePos) => {
+    socket.on("dropDice", (data) => {
         // If we don't receive size data, use a relative size instead
         // This ensures dice rendering works consistently across different screens
-        const diceCount = 5;
+        let bCount = data.bCount;
+        let lCount = data.lCount;
+        const diceCount = bCount + lCount;
         const spacing = 20;
-        const diceSize = mousePos.size || 40; // Use provided size or default
-        const maxRadius = 350;
+        const diceSize = data.size || 40; // Use provided size or default
+        const maxRadius = 50 * data.spread + 50;
         const maxAttempts = 10; // Prevent infinite loops
     
         for (let i = 0; i < diceCount; i++) {
             let newDie;
+            let val;
             let attempts = 0;
+            if (bCount > 0) {
+                val = Math.floor(Math.random() * 6) + 1
+                bCount -= 1;
+            } else if (lCount > 0) {
+                val = Math.floor(Math.random() * 6) + 7
+                lCount -= 1;
+            };
 
             do {
                 const angle = Math.random() * 2 * Math.PI;
@@ -85,10 +95,10 @@ io.on("connection", (socket) => {
 
                 newDie = {
                     id: uuidv4(), // Generate unique ID for each die
-                    x: mousePos.x + Math.cos(angle) * radius,
-                    y: mousePos.y + Math.sin(angle) * radius,
+                    x: data.x + Math.cos(angle) * radius,
+                    y: data.y + Math.sin(angle) * radius,
                     size: diceSize,
-                    value: Math.floor(Math.random() * 6) + 1
+                    value: val
                 };
                 attempts++;
             } while (isOverlapping(newDie, diceHistory, spacing) && attempts < maxAttempts);

@@ -29,8 +29,30 @@
                 <span class="btn-icon">🎲</span>
                 <span class="btn-text">Dice Mode</span>
             </button>
+            <div class="counter">
+                <p>Biome dice</p>
+                <p id="biomeCount">0</p>
+            </div>
+            <div>
+                <button onclick="biomeInc()" class="tool-btn">🔼 Add</button>
+                <button onclick="biomeDec()" class="tool-btn"> 🔽 Remove</button>  
+            </div>
+            <div class="counter">
+                <p>Landmark dice</p>
+                <p id="landmarkCount">0</p>
+            </div>
+            <div>
+                <button onclick="landmarkInc()" class="tool-btn">🔼 Add</button>
+                <button onclick="landmarkDec()" class="tool-btn">🔽 Remove</button>
+                
+            </div>
         </div>
-        
+        <div class="toolbar">
+            <p>Dice roll spread</p>
+            <div class="slidecontainer">
+                <input type="range" min="1" max="10" value="1" class="slider" id="diceSpreadRange">
+              </div>
+        </div>
         <div class="canvas-container">
             <canvas id="whiteboard"></canvas>
             <div class="compass"></div>
