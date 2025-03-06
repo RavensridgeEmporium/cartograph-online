@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartograph Online</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Cartograph Online</h1>
+            <p class="tagline">Chart your adventure</p>
+        </header>
+        
+        <div class="toolbar">
+            <button id="eraseMode" class="tool-btn">
+                <span class="btn-icon">✏️</span>
+                <span class="btn-text">Erase Mode</span>
+            </button>
+            <button id="clearCanvas" class="tool-btn">
+                <span class="btn-icon">🗑️</span>
+                <span class="btn-text">Clear Map</span>
+            </button>
+            <button id="toggleDiceDrop" class="tool-btn">
+                <span class="btn-icon">🎲</span>
+                <span class="btn-text">Dice Mode</span>
+            </button>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="whiteboard"></canvas>
+            <div class="compass"></div>
+        </div>
+        
+        <footer>
+            <p>Cartograph Online — Explore. Map. Discover.</p>
+        </footer>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
