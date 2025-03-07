@@ -12,12 +12,14 @@ app.use("/dice_faces", express.static(__dirname + "/public/dice_faces"));
 
 let drawHistory = []; // Store all drawn lines
 let diceHistory = []; // Store all dice
+let stampHistory = []; //Store all stamps
 
 io.on("connection", (socket) => {
     console.log("A user connected");
 
     socket.emit("drawHistory", drawHistory);
     socket.emit("dropDice", diceHistory);
+    socket.emit("dropStamp", stampHistory);
 
     // Add handler for history requests (for canvas resize)
     socket.on("requestHistory", () => {
@@ -36,7 +38,6 @@ io.on("connection", (socket) => {
     });
 
     socket.on("clearCanvas", () => {
-        // drawHistory = []; // Clear draw history
         diceHistory = []; // Clear dice history
         io.emit("clearCanvas"); // Notify all users
         io.emit("dropDice", []); // Send empty dice array to clear dice
@@ -65,6 +66,20 @@ io.on("connection", (socket) => {
             return distance < (newDie.size + spacing); // Dice are too close
         });
     }
+
+    socket.on("dropStamp", (data) => {
+        console.log("data in stamp", data);
+        newStamp = {
+            id: uuidv4(), // Generate unique ID for each stamp
+            x: data.x,
+            y: data.y,
+            size: data.size,
+            value: data.value
+        };
+
+        stampHistory.push(newStamp);
+        io.emit("dropStamp", stampHistory);
+    });
 
     socket.on("dropDice", (data) => {
         // If we don't receive size data, use a relative size instead

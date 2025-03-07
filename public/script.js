@@ -10,6 +10,7 @@ const ctx = canvas.getContext("2d");
 const socket = io();
 const EMIT_THROTTLE = 50; // ms
 const loadedDiceImages = [];
+const loadedStampImages = [];
 
 let lastEmitTime = 0;
 let biomeCount = 3;
@@ -24,6 +25,7 @@ let selectedDie = null;
 let lastX = 0, lastY = 0;
 let drawHistory = [];
 let localDiceCache = [];
+let localStampCache = [];
 let lastDragX = 0, lastDragY = 0;
 let mouseDown = false;
 let drawingToggle = false;
@@ -45,6 +47,17 @@ const diceImages = [
     "/dice_faces/face10.png",
     "/dice_faces/face11.png",
     "/dice_faces/face12.png"
+];
+
+const stampImages = [
+    "/assets/forest.png",
+    "/assets/mountain.png",
+    "/assets/lake.png",
+    "/assets/open-land.png",
+    "/assets/encampment.png",
+    "/assets/town.png",
+    "/assets/city.png",
+    "/assets/discovery.png"
 ];
 
 function biomeInc() {
@@ -106,6 +119,21 @@ function preloadDiceImages() {
     }
 }
 
+function preloadStampImages() {
+    for (let i = 0; i < stampImages.length; i++) {
+        const img = new Image();
+        img.src = stampImages[i];
+        loadedStampImages.push(img);
+        
+        img.onload = () => {
+            if (localStampCache.length > 0) {
+                redrawBackgroundCanvas();
+                redrawCanvas();
+            }
+        };
+    }
+}
+
 // Function to draw the background (lines and static dice)
 function redrawBackgroundCanvas() {
     backgroundCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
@@ -125,6 +153,10 @@ function redrawBackgroundCanvas() {
         if (!selectedDie || die.id !== selectedDie.id) {
             drawDieOnCanvas(backgroundCtx, die);
         }
+    });
+
+    localStampCache.forEach(stamp => {
+        drawStamp(backgroundCtx, stamp);
     });
 }
 
@@ -168,6 +200,7 @@ function getMousePos(canvas, evt) {
 // Init
 resizeCanvas();
 preloadDiceImages();
+preloadStampImages();
 
 // Handle window resize events
 window.addEventListener('resize', () => {
@@ -273,7 +306,22 @@ document.getElementById("downloadCanvas").addEventListener("click", () => {
     link.click();
 });
 
+function drawStamp(context, stamp) {
+    if (!stamp) return;
 
+    const scaledSize = stamp.size * (canvas.width / 1000);
+
+    const stampIndex = stamp.value - 1;
+    if (stampIndex >= 0 && stampIndex < loadedStampImages.length && loadedStampImages[stampIndex] && loadedStampImages[stampIndex].complete) {
+        context.drawImage(
+            loadedStampImages[stampIndex], 
+            stamp.x - scaledSize / 2, 
+            stamp.y - scaledSize / 2, 
+            scaledSize, 
+            scaledSize
+        );
+    }
+}
 // Function to draw a die on any context
 function drawDieOnCanvas(context, die) {
     if (!die) return;
@@ -336,6 +384,14 @@ socket.on("dropDice", (diceData) => {
     }
 });
 
+socket.on("dropStamp", (stampData) => {
+    if (Array.isArray(stampData)) {
+        localStampCache = stampData
+        redrawBackgroundCanvas();
+        redrawCanvas();
+    }
+});
+
 // Handle single die movement updates
 socket.on("moveDie", (updatedDie) => {
     // Update the die in local cache
@@ -385,6 +441,14 @@ canvas.addEventListener("mousedown", (event) => {
                 spread: diceSpread
             });
         }
+    } else if (stamping) {
+        // Drop new stamp at the cursor position
+        socket.emit("dropStamp", { 
+            x: mousePos.x, 
+            y: mousePos.y,
+            size: 40 * (canvas.width / 1000), 
+            value: 1
+        })
     } else {
         // Normal drawing behavior
         drawing = true;
