@@ -1,18 +1,36 @@
-let biomeCount = 0;
-let landmarkCount = 0;
-let diceSpread = 1;
 const canvas = document.getElementById("whiteboard");
 const bcount = document.getElementById("biomeCount");
 const lcount = document.getElementById("landmarkCount");
 const diceSpreadRange = document.getElementById("diceSpreadRange");
+const drawModeCheckbox = document.getElementById("drawMode");
+const eraseModeCheckbox = document.getElementById("eraseMode");
+const diceModeCheckbox = document.getElementById("toggleDiceDrop");
+const stampModeCheckbox = document.getElementById("toggleStampMode");
 const ctx = canvas.getContext("2d");
 const socket = io();
+const EMIT_THROTTLE = 50; // ms
+const loadedDiceImages = [];
+
+let lastEmitTime = 0;
+let biomeCount = 3;
+let landmarkCount = 1;
+let diceSpread = 1;
 let drawing = false;
 let erasing = false;
-let diceDropMode = false; // Starts OFF
+let stamping = false;
+let diceDropMode = false;
 let draggingDice = false;
 let selectedDie = null;
 let lastX = 0, lastY = 0;
+let drawHistory = [];
+let localDiceCache = [];
+let lastDragX = 0, lastDragY = 0;
+let mouseDown = false;
+let drawingToggle = false;
+
+// Create a background canvas for double buffering
+const backgroundCanvas = document.createElement('canvas');
+const backgroundCtx = backgroundCanvas.getContext('2d');
 
 const diceImages = [
     "/dice_faces/face1.png",
@@ -28,7 +46,6 @@ const diceImages = [
     "/dice_faces/face11.png",
     "/dice_faces/face12.png"
 ];
-
 
 function biomeInc() {
     biomeCount++;
@@ -58,56 +75,86 @@ function landmarkUpdate() {
     lcount.textContent = landmarkCount;
 }
 
-// Local cache of dice for interaction
-let localDiceCache = [];
-// Pre-load dice images to avoid flickering
-const loadedDiceImages = [];
-
 // Set initial canvas size and add resize event listener
 function resizeCanvas() {
     canvas.width = window.innerWidth * 0.8;
     canvas.height = window.innerHeight * 0.8;
-    redrawCanvas(); // Redraw everything when canvas resizes
+    
+    // Resize background canvas too
+    backgroundCanvas.width = canvas.width;
+    backgroundCanvas.height = canvas.height;
+    
+    // Redraw everything when canvas resizes
+    redrawBackgroundCanvas();
+    redrawCanvas();
 }
 
 // Preload all dice images
 function preloadDiceImages() {
-    for (let i = 0; i < loadedDiceImages.length; i++) {
+    for (let i = 0; i < diceImages.length; i++) {
         const img = new Image();
-        img.src = loadedDiceImages[i];
+        img.src = diceImages[i];
         loadedDiceImages.push(img);
-    };
+        
+        // Ensure we can draw dice immediately when loaded
+        img.onload = () => {
+            if (localDiceCache.length > 0) {
+                redrawBackgroundCanvas();
+                redrawCanvas();
+            }
+        };
+    }
 }
-preloadDiceImages();
 
-// Function to redraw the entire canvas
-function redrawCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+// Function to draw the background (lines and static dice)
+function redrawBackgroundCanvas() {
+    backgroundCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
     
     // Redraw all lines
     drawHistory.forEach((data) => {
         if (data.erase) {
-            erase(data.x, data.y, data.size);
+            eraseOnCanvas(backgroundCtx, data.x, data.y, data.size);
         } else {
-            const lineWidth = data.width || 5 * (canvas.width / 1000);
-            drawLine(data.lastX, data.lastY, data.x, data.y, "black", lineWidth);
+            const lineWidth = data.width || 5 * (backgroundCanvas.width / 1000);
+            drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, "black", lineWidth);
         }
     });
     
-    // Redraw all dice
-    localDiceCache.forEach(drawDie);
+    // Draw static dice (not the one being dragged)
+    localDiceCache.forEach(die => {
+        if (!selectedDie || die.id !== selectedDie.id) {
+            drawDieOnCanvas(backgroundCtx, die);
+        }
+    });
 }
 
-// Keep local copy of draw history
-let drawHistory = [];
+// Function to redraw the entire visible canvas
+function redrawCanvas() {
+    // First copy the background
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(backgroundCanvas, 0, 0);
+    
+    // Then draw only the die being dragged on top
+    if (draggingDice && selectedDie) {
+        drawDie(selectedDie);
+    }
+}
 
-// Initial resize
-resizeCanvas();
+// Helper function to draw a line on any context
+function drawLineOnCanvas(context, x1, y1, x2, y2, color, width) {
+    context.lineWidth = width;
+    context.lineCap = "round";
+    context.strokeStyle = color;
+    context.beginPath();
+    context.moveTo(x1, y1);
+    context.lineTo(x2, y2);
+    context.stroke();
+}
 
-// Handle window resize events
-window.addEventListener('resize', () => {
-    resizeCanvas();
-});
+// Helper function to erase on any context
+function eraseOnCanvas(context, x, y, size) {
+    context.clearRect(x - size / 2, y - size / 2, size, size);
+}
 
 // Helper function to get mouse position relative to canvas
 function getMousePos(canvas, evt) {
@@ -118,30 +165,117 @@ function getMousePos(canvas, evt) {
     };
 }
 
+// Init
+resizeCanvas();
+preloadDiceImages();
+
+// Handle window resize events
+window.addEventListener('resize', () => {
+    resizeCanvas();
+});
+
+
 diceSpreadRange.addEventListener("change", () => {
+    console.log("erase: ", erasing);
     diceSpread = diceSpreadRange.value;
 });
 
+//Draw mode toggle
+drawModeCheckbox.addEventListener("change", () => {
+    if (drawModeCheckbox.checked) {
+        diceModeCheckbox.checked = false;
+        eraseModeCheckbox.checked = false;
+        stampModeCheckbox.checked = false;
+        stamping = false;
+        erasing = false;
+        diceDropMode = false;
+        drawingToggle = true;
+    } else {
+        drawingToggle = false;
+    }
+});
+
 // Erase mode toggle
-document.getElementById("eraseMode").addEventListener("click", () => {
-    erasing = !erasing;
-    document.getElementById("eraseMode").textContent = erasing ? "Erase Mode: ON" : "Erase Mode: OFF";
+eraseModeCheckbox.addEventListener("change", () => {
+    if (eraseModeCheckbox.checked) {
+        diceModeCheckbox.checked = false;
+        stampModeCheckbox.checked = false;
+        drawModeCheckbox.checked = false;
+        stamping = false;
+        erasing = true;
+        diceDropMode = false;
+        drawingToggle = false;
+    } else {
+        erasing = false;
+    }
+});
+
+diceModeCheckbox.addEventListener("change", () => {
+    if (diceModeCheckbox.checked) {
+        eraseModeCheckbox.checked = false;
+        stampModeCheckbox.checked = false;
+        drawModeCheckbox.checked = false;
+        diceDropMode = true;
+        erasing = false;
+        stamping = false;
+        drawingToggle = false;
+    } else {
+        diceDropMode = false;
+    }
+});
+
+stampModeCheckbox.addEventListener("change", () => {
+    if (stampModeCheckbox.checked) {
+        eraseModeCheckbox.checked = false;
+        diceModeCheckbox.checked = false;
+        drawModeCheckbox.checked = false;
+        erasing = false;
+        diceDropMode = false;
+        drawingToggle = false;
+        stamping = true;
+    } else {
+        stamping = true;
+    }
 });
 
 document.getElementById("clearCanvas").addEventListener("click", () => {
     socket.emit("clearCanvas");
-    drawHistory = []; // Clear local history
     localDiceCache = []; // Clear local dice cache
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Local clear
+    redrawBackgroundCanvas();
+    redrawCanvas();
 });
 
-document.getElementById("toggleDiceDrop").addEventListener("click", () => {
-    document.getElementById("toggleDiceDrop").textContent = diceDropMode ? "Dice Mode: OFF" : "Dice Mode: ON";
-    diceDropMode = !diceDropMode;
+document.getElementById("downloadCanvas").addEventListener("click", () => {
+    const tempCanvas = document.createElement("canvas");
+    const tempCtx = tempCanvas.getContext("2d");
+
+    // Set canvas size to match the original
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+
+    // Draw a solid white background
+    tempCtx.fillStyle = "white";
+    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Draw the background canvas (preserves drawings)
+    tempCtx.drawImage(backgroundCanvas, 0, 0);
+
+    // Draw the main canvas layer (active drawings & dice)
+    tempCtx.drawImage(canvas, 0, 0);
+
+    // Convert canvas to an image
+    const image = tempCanvas.toDataURL("image/png");
+
+    // Create a download link
+    const link = document.createElement("a");
+    link.href = image;
+    link.download = "cartograph_map.png";
+    link.click();
 });
 
-// Function to draw a single die
-function drawDie(die) {
+
+// Function to draw a die on any context
+function drawDieOnCanvas(context, die) {
     if (!die) return;
     
     // Scale die size relative to canvas dimensions
@@ -149,29 +283,28 @@ function drawDie(die) {
     
     // Draw highlight if this die is selected
     if (selectedDie && selectedDie.id === die.id) {
-        ctx.beginPath();
-        ctx.arc(die.x, die.y, scaledSize / 1.5, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255, 255, 0, 0.3)";
-        ctx.fill();
+        context.beginPath();
+        context.arc(die.x, die.y, scaledSize / 1.5, 0, Math.PI * 2);
+        context.fillStyle = "rgba(255, 255, 0, 0.3)";
+        context.fill();
     }
     
     // Use the preloaded image for better performance
-    if (loadedDiceImages[die.value - 1] && loadedDiceImages[die.value - 1].complete) {
-        ctx.drawImage(
-            loadedDiceImages[die.value - 1], 
+    const dieIndex = die.value - 1;
+    if (dieIndex >= 0 && dieIndex < loadedDiceImages.length && loadedDiceImages[dieIndex] && loadedDiceImages[dieIndex].complete) {
+        context.drawImage(
+            loadedDiceImages[dieIndex], 
             die.x - scaledSize / 2, 
             die.y - scaledSize / 2, 
             scaledSize, 
             scaledSize
         );
-    } else {
-        // Fallback if image isn't loaded yet
-        const img = new Image();
-        img.src = diceImages[die.value - 1];
-        img.onload = () => {
-            ctx.drawImage(img, die.x - scaledSize / 2, die.y - scaledSize / 2, scaledSize, scaledSize);
-        };
     }
+}
+
+// Function to draw a die on the main canvas
+function drawDie(die) {
+    drawDieOnCanvas(ctx, die);
 }
 
 // Function to check if mouse is over a die
@@ -198,6 +331,7 @@ function findDieUnderCursor(mouseX, mouseY) {
 socket.on("dropDice", (diceData) => {
     if (Array.isArray(diceData)) {
         localDiceCache = diceData;
+        redrawBackgroundCanvas();
         redrawCanvas();
     }
 });
@@ -211,20 +345,21 @@ socket.on("moveDie", (updatedDie) => {
         
         // Only redraw if we're not the one dragging
         if (!draggingDice || (selectedDie && selectedDie.id !== updatedDie.id)) {
+            redrawBackgroundCanvas();
             redrawCanvas();
         }
     }
 });
 
 socket.on("clearCanvas", () => {
-    drawHistory = [];
     localDiceCache = [];
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    redrawBackgroundCanvas();
+    redrawCanvas();
 });
 
 canvas.addEventListener("mousedown", (event) => {
     const mousePos = getMousePos(canvas, event);
-    
+    mouseDown = true;
     if (diceDropMode) {
         // Check if clicked on an existing die
         const clickedDie = findDieUnderCursor(mousePos.x, mousePos.y);
@@ -233,8 +368,11 @@ canvas.addEventListener("mousedown", (event) => {
             // Start dragging this die
             draggingDice = true;
             selectedDie = clickedDie;
+            lastDragX = mousePos.x;
+            lastDragY = mousePos.y;
             
-            // Only redraw to show selection
+            // Redraw background once before starting drag
+            redrawBackgroundCanvas();
             redrawCanvas();
         } else {
             // Drop new dice at the cursor position
@@ -252,26 +390,54 @@ canvas.addEventListener("mousedown", (event) => {
         drawing = true;
         lastX = mousePos.x;
         lastY = mousePos.y;
-    }    
+    } 
 });
 
 canvas.addEventListener("mouseup", (event) => {
-    drawing = false;
+    if (drawingToggle) {
+        drawing = false;
+    }
+    mouseDown = false;
     
     if (draggingDice && selectedDie) {
         draggingDice = false;
+        
+        // Final update to server
+        socket.emit("moveDie", {
+            id: selectedDie.id,
+            x: selectedDie.x,
+            y: selectedDie.y
+        });
+        
+        // Reset selection and redraw everything
         selectedDie = null;
-        redrawCanvas(); // Redraw once to clear selection
+        redrawBackgroundCanvas();
+        redrawCanvas();
     }
 });
 
 canvas.addEventListener("mouseleave", () => {
-    drawing = false;
+    if (drawingToggle) {
+        drawing = false;
+    }
+
     if (draggingDice) {
         draggingDice = false;
-        selectedDie = null;
-        redrawCanvas(); // Redraw once to clear selection
+        
+        // Final update to server if we have a selected die
+        if (selectedDie) {
+            socket.emit("moveDie", {
+                id: selectedDie.id,
+                x: selectedDie.x,
+                y: selectedDie.y
+            });
+            selectedDie = null;
+        }
+        
+        redrawBackgroundCanvas();
+        redrawCanvas();
     }
+    mouseDown = false;
 });
 
 canvas.addEventListener("mousemove", (event) => {
@@ -280,7 +446,7 @@ canvas.addEventListener("mousemove", (event) => {
     const y = mousePos.y;
     
     if (draggingDice && selectedDie) {
-        // For smooth dragging, first update our local selectedDie
+        // Update the die position
         selectedDie.x = x;
         selectedDie.y = y;
         
@@ -291,17 +457,18 @@ canvas.addEventListener("mousemove", (event) => {
             localDiceCache[dieIndex].y = y;
         }
         
-        // Redraw efficiently - only clear and redraw the area around the die
+        // Only redraw the main canvas, not the background
         redrawCanvas();
         
         // Throttle server updates for better performance
-        if (!selectedDie.lastEmit || Date.now() - selectedDie.lastEmit > 30) { // 30ms throttle
+        const now = Date.now();
+        if (now - lastEmitTime > EMIT_THROTTLE) {
             socket.emit("moveDie", {
                 id: selectedDie.id,
                 x: x,
                 y: y
             });
-            selectedDie.lastEmit = Date.now();
+            lastEmitTime = now;
         }
         
         // Update cursor to indicate dragging
@@ -315,16 +482,32 @@ canvas.addEventListener("mousemove", (event) => {
             canvas.style.cursor = 'default';
         }
     } else if (drawing) {
-        if (erasing) {
+        if (erasing && mouseDown) {
             // Scale eraser size relative to canvas size
             const eraserSize = 20 * (canvas.width / 1000);
-            erase(x, y, eraserSize); // Local erasing
-            socket.emit("erase", { x, y, size: eraserSize }); // Send erase action to others
-        } else {
+            
+            // Add to drawing history
+            drawHistory.push({ x, y, size: eraserSize, erase: true });
+            
+            // Erase on both canvases
+            erase(x, y, eraserSize);
+            eraseOnCanvas(backgroundCtx, x, y, eraserSize);
+            
+            // Send erase action to others
+            socket.emit("erase", { x, y, size: eraserSize });
+        } else if (drawingToggle && mouseDown) {
             // Scale line width relative to canvas size
             const lineWidth = 5 * (canvas.width / 1000);
-            drawLine(lastX, lastY, x, y, "black", lineWidth); // Local drawing
-            socket.emit("draw", { lastX, lastY, x, y, width: lineWidth }); // Send draw action to others
+            
+            // Add to drawing history
+            drawHistory.push({ lastX, lastY, x, y, width: lineWidth });
+            
+            // Draw on both canvases
+            drawLine(lastX, lastY, x, y, "black", lineWidth);
+            drawLineOnCanvas(backgroundCtx, lastX, lastY, x, y, "black", lineWidth);
+            
+            // Send draw action to others
+            socket.emit("draw", { lastX, lastY, x, y, width: lineWidth });
         }
         lastX = x;
         lastY = y;
@@ -333,23 +516,18 @@ canvas.addEventListener("mousemove", (event) => {
 
 // Function to draw a line
 function drawLine(x1, y1, x2, y2, color, width) {
-    ctx.lineWidth = width;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
+    drawLineOnCanvas(ctx, x1, y1, x2, y2, color, width);
 }
 
 // Function to erase
 function erase(x, y, size) {
-    ctx.clearRect(x - size / 2, y - size / 2, size, size);
+    eraseOnCanvas(ctx, x, y, size);
 }
 
 // Receive drawing history
 socket.on("drawHistory", (history) => {
     drawHistory = history; // Store locally
+    redrawBackgroundCanvas();
     redrawCanvas();
 });
 
@@ -357,15 +535,19 @@ socket.on("drawHistory", (history) => {
 socket.on("draw", (data) => {
     drawHistory.push(data); // Add to local history
     
-    // Only draw the new line without clearing
+    // Draw the new line on both canvases
     const lineWidth = data.width || 5 * (canvas.width / 1000);
     drawLine(data.lastX, data.lastY, data.x, data.y, "black", lineWidth);
+    drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, "black", lineWidth);
 });
 
 // Receive erase updates from server
 socket.on("erase", (data) => {
     drawHistory.push({ ...data, erase: true }); // Add to local history
+    
+    // Erase on both canvases
     erase(data.x, data.y, data.size);
+    eraseOnCanvas(backgroundCtx, data.x, data.y, data.size);
 });
 
 // Request drawing history when reconnecting

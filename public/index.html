@@ -17,37 +17,53 @@
         </header>
         
         <div class="toolbar">
-            <button id="eraseMode" class="tool-btn">
+            <label class="toggle-btn">
+                <input type="checkbox" id="drawMode">
                 <span class="btn-icon">✏️</span>
+                <span class="btn-text">Draw Mode</span>
+            </label>
+            <label class="toggle-btn">
+                <input type="checkbox" id="eraseMode">
+                <span class="btn-icon">🧽</span>
                 <span class="btn-text">Erase Mode</span>
-            </button>
-            <button id="clearCanvas" class="tool-btn">
-                <span class="btn-icon">🗑️</span>
-                <span class="btn-text">Clear Map</span>
-            </button>
-            <button id="toggleDiceDrop" class="tool-btn">
+            </label>
+            <label class="toggle-btn">
+                <input type="checkbox" id="toggleDiceDrop">
                 <span class="btn-icon">🎲</span>
                 <span class="btn-text">Dice Mode</span>
+            </label>
+            <label class="toggle-btn">
+                <input type="checkbox" id="toggleStampMode">
+                <span class="btn-icon">🌲</span>
+                <span class="btn-text">Stamp Mode</span>
+            </label>
+            <button id="clearCanvas" class="tool-btn">
+                <span class="btn-icon">🗑️</span>
+                <span class="btn-text">Clear Dice</span>
             </button>
-            <div class="counter">
-                <p>Biome dice</p>
-                <p id="biomeCount">0</p>
-            </div>
-            <div>
-                <button onclick="biomeInc()" class="tool-btn">🔼 Add</button>
-                <button onclick="biomeDec()" class="tool-btn"> 🔽 Remove</button>  
-            </div>
-            <div class="counter">
-                <p>Landmark dice</p>
-                <p id="landmarkCount">0</p>
-            </div>
-            <div>
-                <button onclick="landmarkInc()" class="tool-btn">🔼 Add</button>
-                <button onclick="landmarkDec()" class="tool-btn">🔽 Remove</button>
-                
-            </div>
+            <button id="downloadCanvas" class="tool-btn">
+                <span class="btn-icon">📥</span>
+                <span class="btn-text">Download Map</span>
+            </button>
         </div>
         <div class="toolbar">
+            <div class="counter">
+                <p>Biome dice</p>
+                <p id="biomeCount">3</p>
+                <div class="chevron-buttons">
+                    <button onclick="biomeInc()" class="chevron-btn">▲</button>
+                    <button onclick="biomeDec()" class="chevron-btn">▼</button>  
+                </div>
+            </div>
+            
+            <div class="counter">
+                <p>Landmark dice</p>
+                <p id="landmarkCount">1</p>
+                <div class="chevron-buttons">
+                    <button onclick="landmarkInc()" class="chevron-btn">▲</button>
+                    <button onclick="landmarkDec()" class="chevron-btn">▼</button>
+                </div>
+            </div>
             <p>Dice roll spread</p>
             <div class="slidecontainer">
                 <input type="range" min="1" max="10" value="1" class="slider" id="diceSpreadRange">

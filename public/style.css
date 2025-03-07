@@ -18,11 +18,37 @@ body {
     background-color: var(--background-color);
     color: var(--text-color);
     font-family: 'Crimson Pro', serif;
-    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23d2b48c' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+    background-image: url("assets/bg.png");
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.chevron-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.chevron-btn {
+    background-color: var(--secondary-color);
+    color: var(--accent-color);
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.chevron-btn:hover {
+    background-color: var(--primary-color);
+    color: var(--canvas-color);
+    transform: scale(1.1);
 }
 
 button {
@@ -57,6 +83,47 @@ h1 {
     font-style: italic;
     color: var(--accent-color);
     font-size: 1.2rem;
+}
+
+.slidecontainer {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 200px;
+    height: 10px;
+    border-radius: 5px;
+    background: var(--secondary-color);
+    outline: none;
+    opacity: 0.9;
+    transition: opacity .15s ease-in-out;
+    cursor: pointer;
+}
+
+.slider:hover {
+    opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+}
+
+.slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
 }
 
 .toolbar {
@@ -103,6 +170,58 @@ h1 {
     justify-content: center;
 }
 
+.toggle-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center; /* Ensure content is centered */
+    padding: 10px 16px;
+    height: 60px; /* Set a fixed height to match other buttons */
+    background-color: var(--secondary-color);
+    color: var(--accent-color);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-family: 'Crimson Pro', serif;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    user-select: none;
+}
+
+/* Ensure all buttons have the same height */
+.tool-btn, .toggle-btn {
+    height: 60px; /* Set all to the same height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Hide the checkbox but keep it functional */
+.toggle-btn input {
+    display: none;
+}
+
+.toggle-btn:has(input:checked) {
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Style only the text (not the icon) when checked */
+.toggle-btn input:checked ~ .btn-text {
+    color: var(--canvas-color);
+}
+
+/* Keep the icon in its original style even when the button is checked */
+.toggle-btn input:checked ~ .btn-icon {
+    /* Either leave this empty to inherit from the icon's default style,
+       or explicitly set properties you want to maintain */
+    color: var(--accent-color); /* Keep original icon color */
+}
+
 canvas {
     background-color: var(--canvas-color);
     border: 8px solid var(--primary-color);
@@ -119,7 +238,7 @@ canvas {
     right: 20px;
     width: 60px;
     height: 60px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='none' stroke='%238B4513' stroke-width='2'/%3E%3Cpath d='M50 5 L50 20 M50 80 L50 95 M5 50 L20 50 M80 50 L95 50' stroke='%238B4513' stroke-width='2'/%3E%3Ctext x='50' y='20' font-family='serif' font-size='14' text-anchor='middle' fill='%238B4513'%3EN%3C/text%3E%3Ctext x='50' y='90' font-family='serif' font-size='14' text-anchor='middle' fill='%238B4513'%3ES%3C/text%3E%3Ctext x='85' y='54' font-family='serif' font-size='14' text-anchor='middle' fill='%238B4513'%3EE%3C/text%3E%3Ctext x='15' y='54' font-family='serif' font-size='14' text-anchor='middle' fill='%238B4513'%3EW%3C/text%3E%3C/svg%3E");
+    background-image: url("assets/compass-detailed.png");
     background-size: contain;
     opacity: 0.7;
     pointer-events: none;

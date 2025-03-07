@@ -36,7 +36,7 @@ io.on("connection", (socket) => {
     });
 
     socket.on("clearCanvas", () => {
-        drawHistory = []; // Clear draw history
+        // drawHistory = []; // Clear draw history
         diceHistory = []; // Clear dice history
         io.emit("clearCanvas"); // Notify all users
         io.emit("dropDice", []); // Send empty dice array to clear dice
@@ -74,7 +74,7 @@ io.on("connection", (socket) => {
         const diceCount = bCount + lCount;
         const spacing = 20;
         const diceSize = data.size || 40; // Use provided size or default
-        const maxRadius = 50 * data.spread + 50;
+        const maxRadius = 50 * data.spread + 100;
         const maxAttempts = 10; // Prevent infinite loops
     
         for (let i = 0; i < diceCount; i++) {
