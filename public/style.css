@@ -151,10 +151,10 @@ h1 {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.tool-btn:hover {
+.tool-btn:hover, .toggle-btn:hover {
     background-color: var(--primary-color);
     color: var(--canvas-color);
-    transform: translateY(-2px);
+    transform: scale(1.1);
 }
 
 .btn-icon {
