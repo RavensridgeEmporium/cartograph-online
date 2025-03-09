@@ -113,7 +113,6 @@ function resizeCanvas() {
     redrawCanvas();
 }
 
-// Preload all dice images
 function preloadDiceImages() {
     for (let i = 0; i < diceImages.length; i++) {
         const img = new Image();
@@ -145,7 +144,6 @@ function preloadStampImages() {
     }
 }
 
-// Function to draw the background (lines and static dice)
 function redrawBackgroundCanvas() {
     backgroundCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
 
@@ -174,7 +172,6 @@ function redrawBackgroundCanvas() {
     prevCanvasHeight = canvas.height;
 }
 
-// Function to redraw the entire visible canvas
 function redrawCanvas() {
     // First copy the background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -186,7 +183,6 @@ function redrawCanvas() {
     }
 }
 
-// Helper function to draw a line on any context
 function drawLineOnCanvas(context, x1, y1, x2, y2, color, width) {
     context.lineWidth = width;
     context.lineCap = "round";
@@ -197,12 +193,10 @@ function drawLineOnCanvas(context, x1, y1, x2, y2, color, width) {
     context.stroke();
 }
 
-// Helper function to erase on any context
 function eraseOnCanvas(context, x, y, size) {
     context.clearRect(x - size / 2, y - size / 2, size, size);
 }
 
-// Helper function to get mouse position relative to canvas
 function getMousePos(canvas, evt) {
     const rect = canvas.getBoundingClientRect();
     return {
@@ -323,9 +317,18 @@ stampModeCheckbox.addEventListener("change", () => {
     updateStampToolbar();
 });
 
+document.getElementById("clearDice").addEventListener("click", () => {
+    socket.emit("clearDice");
+    localDiceCache = []; // Clear local dice cache
+    redrawBackgroundCanvas();
+    redrawCanvas();
+});
+
 document.getElementById("clearCanvas").addEventListener("click", () => {
     socket.emit("clearCanvas");
     localDiceCache = []; // Clear local dice cache
+    localStampCache = [];
+    drawHistory = []
     redrawBackgroundCanvas();
     redrawCanvas();
 });
@@ -459,8 +462,16 @@ socket.on("moveDie", (updatedDie) => {
     }
 });
 
-socket.on("clearCanvas", () => {
+socket.on("clearDice", () => {
     localDiceCache = [];
+    redrawBackgroundCanvas();
+    redrawCanvas();
+});
+
+socket.on("clearCanvas", () => {
+    localStampCache = [];
+    localDiceCache = [];
+    drawHistory = [];
     redrawBackgroundCanvas();
     redrawCanvas();
 });

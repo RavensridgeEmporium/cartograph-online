@@ -37,8 +37,16 @@ io.on("connection", (socket) => {
         socket.broadcast.emit("erase", data); // Send erase event to others
     });
 
+    socket.on("clearDice", () => {
+        diceHistory = []; // Clear dice history
+        io.emit("clearDice"); // Notify all users
+        io.emit("dropDice", []); // Send empty dice array to clear dice
+    });
+
     socket.on("clearCanvas", () => {
         diceHistory = []; // Clear dice history
+        drawHistory = [];
+        stampHistory = [];
         io.emit("clearCanvas"); // Notify all users
         io.emit("dropDice", []); // Send empty dice array to clear dice
     });
