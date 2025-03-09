@@ -6,6 +6,7 @@ const drawModeCheckbox = document.getElementById("drawMode");
 const eraseModeCheckbox = document.getElementById("eraseMode");
 const diceModeCheckbox = document.getElementById("toggleDiceDrop");
 const stampModeCheckbox = document.getElementById("toggleStampMode");
+const debug = document.getElementById("debug");
 const ctx = canvas.getContext("2d");
 const socket = io();
 const EMIT_THROTTLE = 50; // ms
@@ -29,6 +30,8 @@ let localStampCache = [];
 let lastDragX = 0, lastDragY = 0;
 let mouseDown = false;
 let drawingToggle = false;
+let prevCanvasWidth = canvas.width;
+let prevCanvasHeight = canvas.height;
 
 // Create a background canvas for double buffering
 const backgroundCanvas = document.createElement('canvas');
@@ -88,14 +91,20 @@ function landmarkUpdate() {
     lcount.textContent = landmarkCount;
 }
 
-// Set initial canvas size and add resize event listener
 function resizeCanvas() {
-    canvas.width = window.innerWidth * 0.8;
-    canvas.height = window.innerHeight * 0.8;
-    
-    // Resize background canvas too
-    backgroundCanvas.width = canvas.width;
-    backgroundCanvas.height = canvas.height;
+
+    if(window.innerHeight >= (9*window.innerWidth/16)) {
+        canvas.width  = window.innerWidth;
+        canvas.height = Math.floor(9*canvas.width/16);
+        backgroundCanvas.width  = window.innerWidth;
+        backgroundCanvas.height = Math.floor(9*canvas.width/16);
+    }
+    else {
+        canvas.height = window.innerHeight;
+        canvas.width  = Math.floor(16*canvas.height/9);
+        backgroundCanvas.height = window.innerHeight;
+        backgroundCanvas.width  = Math.floor(16*canvas.height/9);
+    }
     
     // Redraw everything when canvas resizes
     redrawBackgroundCanvas();
@@ -137,14 +146,14 @@ function preloadStampImages() {
 // Function to draw the background (lines and static dice)
 function redrawBackgroundCanvas() {
     backgroundCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
-    
+
     // Redraw all lines
     drawHistory.forEach((data) => {
         if (data.erase) {
-            eraseOnCanvas(backgroundCtx, data.x, data.y, data.size);
+            eraseOnCanvas(backgroundCtx, data.x * canvas.width, data.y * canvas.height, data.size);
         } else {
-            const lineWidth = data.width || 5 * (backgroundCanvas.width / 1000);
-            drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, "black", lineWidth);
+            const lineWidth = backgroundCanvas.width/300;
+            drawLineOnCanvas(backgroundCtx, data.lastX * canvas.width, data.lastY * canvas.height, data.x * canvas.width, data.y * canvas.height, "black", lineWidth);
         }
     });
     
@@ -158,6 +167,9 @@ function redrawBackgroundCanvas() {
     localStampCache.forEach(stamp => {
         drawStamp(backgroundCtx, stamp);
     });
+
+    prevCanvasWidth = canvas.width;
+    prevCanvasHeight = canvas.height;
 }
 
 // Function to redraw the entire visible canvas
@@ -207,13 +219,11 @@ window.addEventListener('resize', () => {
     resizeCanvas();
 });
 
-
 diceSpreadRange.addEventListener("change", () => {
     console.log("erase: ", erasing);
     diceSpread = diceSpreadRange.value;
 });
 
-//Draw mode toggle
 drawModeCheckbox.addEventListener("change", () => {
     if (drawModeCheckbox.checked) {
         diceModeCheckbox.checked = false;
@@ -228,7 +238,6 @@ drawModeCheckbox.addEventListener("change", () => {
     }
 });
 
-// Erase mode toggle
 eraseModeCheckbox.addEventListener("change", () => {
     if (eraseModeCheckbox.checked) {
         diceModeCheckbox.checked = false;
@@ -309,7 +318,7 @@ document.getElementById("downloadCanvas").addEventListener("click", () => {
 function drawStamp(context, stamp) {
     if (!stamp) return;
 
-    const scaledSize = stamp.size * (canvas.width / 1000);
+    const scaledSize = canvas.width / 23;
 
     const stampIndex = stamp.value - 1;
     if (stampIndex >= 0 && stampIndex < loadedStampImages.length && loadedStampImages[stampIndex] && loadedStampImages[stampIndex].complete) {
@@ -327,7 +336,7 @@ function drawDieOnCanvas(context, die) {
     if (!die) return;
     
     // Scale die size relative to canvas dimensions
-    const scaledSize = die.size * (canvas.width / 1000);
+    const scaledSize = canvas.width / 20;
     
     // Draw highlight if this die is selected
     if (selectedDie && selectedDie.id === die.id) {
@@ -357,7 +366,7 @@ function drawDie(die) {
 
 // Function to check if mouse is over a die
 function isOverDie(mouseX, mouseY, die) {
-    const scaledSize = die.size * (canvas.width / 1000);
+    const scaledSize = canvas.width / 22;
     const dx = mouseX - die.x;
     const dy = mouseY - die.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -433,9 +442,9 @@ canvas.addEventListener("mousedown", (event) => {
         } else {
             // Drop new dice at the cursor position
             socket.emit("dropDice", { 
-                x: mousePos.x, 
+                x: mousePos.x,
                 y: mousePos.y,
-                size: 40 * (canvas.width / 1000), 
+                size: 20, 
                 bCount: biomeCount,
                 lCount: landmarkCount,
                 spread: diceSpread
@@ -446,7 +455,7 @@ canvas.addEventListener("mousedown", (event) => {
         socket.emit("dropStamp", { 
             x: mousePos.x, 
             y: mousePos.y,
-            size: 40 * (canvas.width / 1000), 
+            size: 40, 
             value: 1
         })
     } else {
@@ -548,26 +557,32 @@ canvas.addEventListener("mousemove", (event) => {
     } else if (drawing) {
         if (erasing && mouseDown) {
             // Scale eraser size relative to canvas size
-            const eraserSize = 20 * (canvas.width / 1000);
+            const eraserSize = canvas.width/50;
             
             // Add to drawing history
             drawHistory.push({ x, y, size: eraserSize, erase: true });
             
             // Erase on both canvases
-            erase(x, y, eraserSize);
+            eraseOnCanvas(ctx, x, y, eraserSize);
             eraseOnCanvas(backgroundCtx, x, y, eraserSize);
             
             // Send erase action to others
             socket.emit("erase", { x, y, size: eraserSize });
         } else if (drawingToggle && mouseDown) {
             // Scale line width relative to canvas size
-            const lineWidth = 5 * (canvas.width / 1000);
+            const lineWidth = canvas.width/300;
             
+            const lastXScaled = lastX / canvas.width;
+            const lastYScaled = lastY / canvas.height;
+            const xScaled = x / canvas.width;
+            const yScaled = y / canvas.height;
+
             // Add to drawing history
-            drawHistory.push({ lastX, lastY, x, y, width: lineWidth });
+            drawHistory.push({ lastX: lastXScaled, lastY: lastYScaled, x: xScaled, y: yScaled, width: lineWidth });
             
             // Draw on both canvases
-            drawLine(lastX, lastY, x, y, "black", lineWidth);
+
+            drawLineOnCanvas(ctx, lastX, lastY, x, y, "black", lineWidth);
             drawLineOnCanvas(backgroundCtx, lastX, lastY, x, y, "black", lineWidth);
             
             // Send draw action to others
@@ -578,15 +593,6 @@ canvas.addEventListener("mousemove", (event) => {
     }
 });
 
-// Function to draw a line
-function drawLine(x1, y1, x2, y2, color, width) {
-    drawLineOnCanvas(ctx, x1, y1, x2, y2, color, width);
-}
-
-// Function to erase
-function erase(x, y, size) {
-    eraseOnCanvas(ctx, x, y, size);
-}
 
 // Receive drawing history
 socket.on("drawHistory", (history) => {
@@ -600,8 +606,8 @@ socket.on("draw", (data) => {
     drawHistory.push(data); // Add to local history
     
     // Draw the new line on both canvases
-    const lineWidth = data.width || 5 * (canvas.width / 1000);
-    drawLine(data.lastX, data.lastY, data.x, data.y, "black", lineWidth);
+    const lineWidth = data.width;
+    drawLineOnCanvas(ctx, data.lastX, data.lastY, data.x, data.y, "black", lineWidth);
     drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, "black", lineWidth);
 });
 
@@ -611,6 +617,7 @@ socket.on("erase", (data) => {
     
     // Erase on both canvases
     erase(data.x, data.y, data.size);
+    eraseOnCanvas(ctx, data.x, data.y, data.size);
     eraseOnCanvas(backgroundCtx, data.x, data.y, data.size);
 });
 
@@ -619,7 +626,6 @@ socket.on("connect", () => {
     socket.emit("requestHistory");
 });
 
-// Minor update to the server to improve performance
 socket.on("requestHistory", () => {
     socket.emit("drawHistory", drawHistory);
 });
