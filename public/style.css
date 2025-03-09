@@ -284,6 +284,13 @@ canvas {
     transform: translateX(0); /* Slide in */
 }
 
+#stamp-toolbar img.selected {
+    filter:invert(1);
+    background-color: #74baec;
+    border: 2px solid #b5d3f0;
+    transform: scale(1.1)
+}
+
 footer {
     text-align: center;
     margin-top: 20px;

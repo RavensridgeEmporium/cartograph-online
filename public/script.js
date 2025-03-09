@@ -33,6 +33,7 @@ let mouseDown = false;
 let drawingToggle = false;
 let prevCanvasWidth = canvas.width;
 let prevCanvasHeight = canvas.height;
+let selectedStampValue = 1;
 
 // Create a background canvas for double buffering
 const backgroundCanvas = document.createElement('canvas');
@@ -210,21 +211,34 @@ function getMousePos(canvas, evt) {
     };
 }
 
+function highlightSelectedStamp() {
+    const images = document.querySelectorAll("#stamp-toolbar img");
+    images.forEach(img => {
+        img.classList.toggle("selected", parseInt(img.dataset.index) === selectedStampValue);
+    });
+}
+
 function updateStampToolbar() {
     if (stamping) {
-        // Populate the toolbar with stamp images
-        stampToolbar.innerHTML = ""; // Clear previous images
+        stampToolbar.innerHTML = "";
         
         stampImages.forEach((imgSrc, index) => {
             const img = document.createElement("img");
             img.src = imgSrc;
             img.alt = `Stamp ${index + 1}`;
+            img.dataset.index = index + 1;
+
+            img.addEventListener("click", () => {
+                selectedStampValue = index + 1;
+                highlightSelectedStamp(); // Update UI to show selected stamp
+            });
+
             stampToolbar.appendChild(img);
         });
 
-        stampToolbar.classList.add("show"); // Show the toolbar
+        stampToolbar.classList.add("show");
     } else {
-        stampToolbar.classList.remove("show"); // Hide the toolbar
+        stampToolbar.classList.remove("show");
     }
 }
 
@@ -472,7 +486,7 @@ canvas.addEventListener("mousedown", (event) => {
             x: mousePos.x, 
             y: mousePos.y,
             size: 40, 
-            value: 1
+            value: selectedStampValue
         })
     } else {
         // Normal drawing behavior
