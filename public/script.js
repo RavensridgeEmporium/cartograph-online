@@ -21,7 +21,7 @@ let diceSpread = 1;
 let drawing = false;
 let erasing = false;
 let stamping = false;
-let diceDropMode = true;
+let diceDropMode = false;
 let draggingDice = false;
 let selectedDie = null;
 let lastX = 0, lastY = 0;
@@ -167,7 +167,7 @@ function redrawBackgroundCanvas() {
     });
 
     localStampCache.forEach(stamp => {
-        drawStamp(backgroundCtx, stamp);
+        drawStampOnCanvas(backgroundCtx, stamp);
     });
 
     prevCanvasWidth = canvas.width;
@@ -241,11 +241,18 @@ function updateStampToolbar() {
         stampToolbar.classList.remove("show");
     }
 }
-
+function toggleAllButtonsOff() {
+    diceModeCheckbox.checked = false;
+    eraseModeCheckbox.checked = false;
+    stampModeCheckbox.checked = false;
+    drawModeCheckbox.checked = false;
+}
 // Init
 resizeCanvas();
 preloadDiceImages();
 preloadStampImages();
+updateStampToolbar();
+toggleAllButtonsOff();
 
 // Handle window resize events
 window.addEventListener('resize', () => {
@@ -265,6 +272,7 @@ drawModeCheckbox.addEventListener("change", () => {
         erasing = false;
         diceDropMode = false;
         drawingToggle = true;
+        updateStampToolbar();
     } else {
         drawingToggle = false;
     }
@@ -279,6 +287,7 @@ eraseModeCheckbox.addEventListener("change", () => {
         erasing = true;
         diceDropMode = false;
         drawingToggle = false;
+        updateStampToolbar();
     } else {
         erasing = false;
     }
@@ -293,6 +302,7 @@ diceModeCheckbox.addEventListener("change", () => {
         erasing = false;
         stamping = false;
         drawingToggle = false;
+        updateStampToolbar();
     } else {
         diceDropMode = false;
     }
@@ -348,17 +358,20 @@ document.getElementById("downloadCanvas").addEventListener("click", () => {
     link.click();
 });
 
-function drawStamp(context, stamp) {
+function drawStampOnCanvas(context, stamp) {
     if (!stamp) return;
 
     const scaledSize = canvas.width / 23;
+    const alreadyScaled = stamp.x > 1 || stamp.y > 1;
+    const absoluteX = alreadyScaled ? stamp.x : stamp.x * canvas.width;
+    const absoluteY = alreadyScaled ? stamp.y : stamp.y * canvas.height;
 
     const stampIndex = stamp.value - 1;
     if (stampIndex >= 0 && stampIndex < loadedStampImages.length && loadedStampImages[stampIndex] && loadedStampImages[stampIndex].complete) {
         context.drawImage(
             loadedStampImages[stampIndex], 
-            stamp.x - scaledSize / 2, 
-            stamp.y - scaledSize / 2, 
+            absoluteX - scaledSize / 2, 
+            absoluteY - scaledSize / 2, 
             scaledSize, 
             scaledSize
         );
@@ -482,7 +495,9 @@ canvas.addEventListener("mousedown", (event) => {
         }
     } else if (stamping) {
         // Drop new stamp at the cursor position
-        socket.emit("dropStamp", { 
+        socket.emit("dropStamp", {
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height, 
             x: mousePos.x, 
             y: mousePos.y,
             size: 40, 

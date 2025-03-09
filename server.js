@@ -67,11 +67,9 @@ io.on("connection", (socket) => {
     }
 
     socket.on("dropStamp", (data) => {
-        console.log("data in stamp", data);
         newStamp = {
-            id: uuidv4(), // Generate unique ID for each stamp
-            x: data.x,
-            y: data.y,
+            x: data.x / data.canvasWidth,
+            y: data.y / data.canvasHeight,
             size: data.size,
             value: data.value
         };
@@ -81,8 +79,6 @@ io.on("connection", (socket) => {
     });
 
     socket.on("dropDice", (data) => {
-        // If we don't receive size data, use a relative size instead
-        // This ensures dice rendering works consistently across different screens
         let bCount = data.bCount;
         let lCount = data.lCount;
         const diceCount = bCount + lCount;
