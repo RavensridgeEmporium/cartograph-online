@@ -6,6 +6,7 @@ const drawModeCheckbox = document.getElementById("drawMode");
 const eraseModeCheckbox = document.getElementById("eraseMode");
 const diceModeCheckbox = document.getElementById("toggleDiceDrop");
 const stampModeCheckbox = document.getElementById("toggleStampMode");
+const stampToolbar = document.getElementById("stamp-toolbar");
 const debug = document.getElementById("debug");
 const ctx = canvas.getContext("2d");
 const socket = io();
@@ -209,6 +210,24 @@ function getMousePos(canvas, evt) {
     };
 }
 
+function updateStampToolbar() {
+    if (stamping) {
+        // Populate the toolbar with stamp images
+        stampToolbar.innerHTML = ""; // Clear previous images
+        
+        stampImages.forEach((imgSrc, index) => {
+            const img = document.createElement("img");
+            img.src = imgSrc;
+            img.alt = `Stamp ${index + 1}`;
+            stampToolbar.appendChild(img);
+        });
+
+        stampToolbar.classList.add("show"); // Show the toolbar
+    } else {
+        stampToolbar.classList.remove("show"); // Hide the toolbar
+    }
+}
+
 // Init
 resizeCanvas();
 preloadDiceImages();
@@ -275,8 +294,9 @@ stampModeCheckbox.addEventListener("change", () => {
         drawingToggle = false;
         stamping = true;
     } else {
-        stamping = true;
+        stamping = false;
     }
+    updateStampToolbar();
 });
 
 document.getElementById("clearCanvas").addEventListener("click", () => {

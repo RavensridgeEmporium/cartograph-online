@@ -207,7 +207,7 @@ h1 {
     background-color: var(--primary-color);
     border: 2px solid var(--accent-color);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-    transform: translateY(-2px);
+    transform: scale(1.1);
 }
 
 /* Style only the text (not the icon) when checked */
@@ -217,9 +217,7 @@ h1 {
 
 /* Keep the icon in its original style even when the button is checked */
 .toggle-btn input:checked ~ .btn-icon {
-    /* Either leave this empty to inherit from the icon's default style,
-       or explicitly set properties you want to maintain */
-    color: var(--accent-color); /* Keep original icon color */
+    color: var(--accent-color);
 }
 
 canvas {
@@ -247,9 +245,43 @@ canvas {
     margin-bottom: 20px;
 }
 
-.clicks {
-    font-size: 1.1em;
-    margin-top: 10px;
+#stamp-toolbar {
+    position: fixed;
+    top: 50px; /* Below the top toolbar */
+    left: 0;
+    width: 120px; /* Adjust width as needed */
+    background-color: var(--secondary-color);
+    border: 2px solid var(--border-color);
+    color: var(--accent-color);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(-120px); /* Hide it offscreen */
+    max-height: 90vh; /* Prevent it from getting too tall */
+    overflow-y: auto; /* Enable scrolling if too many images */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+#stamp-toolbar img {
+    width: 80px; /* Adjust size as needed */
+    height: auto;
+    border-radius: 5px;
+    transition: transform 0.2s;
+    padding: 5px;
+}
+
+#stamp-toolbar img:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+/* Visible state */
+#stamp-toolbar.show {
+    transform: translateX(0); /* Slide in */
 }
 
 footer {
@@ -259,27 +291,4 @@ footer {
     color: var(--accent-color);
     padding: 10px;
     font-size: 0.9rem;
-}
-
-@media (max-width: 768px) {
-    h1 {
-        font-size: 2rem;
-    }
-    
-    .toolbar {
-        gap: 10px;
-    }
-    
-    .tool-btn {
-        padding: 8px 12px;
-    }
-    
-    canvas {
-        min-height: 350px;
-    }
-    
-    .compass {
-        width: 40px;
-        height: 40px;
-    }
 }

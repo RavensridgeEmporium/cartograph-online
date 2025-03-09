@@ -1,0 +1,6 @@
+- [ ] Ensure a minimum size for the canvas so it doesn't warp it's apsect ratio at tiny screen sizes
+- [ ] Fix layout to use grid maybe?
+- [ ] Fix dice spread to be a chevron to match the others
+- [ ] Make side panel conditionally appear to show stamp options
+- [ ] Add link to Ravensridge in the footer
+- [ ] Fix row padding / margins to take up less space
