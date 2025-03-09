@@ -20,7 +20,7 @@ let diceSpread = 1;
 let drawing = false;
 let erasing = false;
 let stamping = false;
-let diceDropMode = false;
+let diceDropMode = true;
 let draggingDice = false;
 let selectedDie = null;
 let lastX = 0, lastY = 0;
@@ -180,7 +180,7 @@ function redrawCanvas() {
     
     // Then draw only the die being dragged on top
     if (draggingDice && selectedDie) {
-        drawDie(selectedDie);
+        drawDieOnCanvas(ctx, selectedDie);
     }
 }
 
@@ -220,7 +220,6 @@ window.addEventListener('resize', () => {
 });
 
 diceSpreadRange.addEventListener("change", () => {
-    console.log("erase: ", erasing);
     diceSpread = diceSpreadRange.value;
 });
 
@@ -334,14 +333,16 @@ function drawStamp(context, stamp) {
 // Function to draw a die on any context
 function drawDieOnCanvas(context, die) {
     if (!die) return;
-    
     // Scale die size relative to canvas dimensions
     const scaledSize = canvas.width / 20;
-    
+    const alreadyScaled = die.x > 1 || die.y > 1;
+    const absoluteX = alreadyScaled ? die.x : die.x * canvas.width;
+    const absoluteY = alreadyScaled ? die.y : die.y * canvas.height;
+
     // Draw highlight if this die is selected
     if (selectedDie && selectedDie.id === die.id) {
         context.beginPath();
-        context.arc(die.x, die.y, scaledSize / 1.5, 0, Math.PI * 2);
+        context.arc(absoluteX, absoluteY, scaledSize / 1.5, 0, Math.PI * 2);
         context.fillStyle = "rgba(255, 255, 0, 0.3)";
         context.fill();
     }
@@ -351,24 +352,19 @@ function drawDieOnCanvas(context, die) {
     if (dieIndex >= 0 && dieIndex < loadedDiceImages.length && loadedDiceImages[dieIndex] && loadedDiceImages[dieIndex].complete) {
         context.drawImage(
             loadedDiceImages[dieIndex], 
-            die.x - scaledSize / 2, 
-            die.y - scaledSize / 2, 
+            absoluteX- scaledSize / 2, 
+            absoluteY- scaledSize / 2, 
             scaledSize, 
             scaledSize
         );
     }
 }
 
-// Function to draw a die on the main canvas
-function drawDie(die) {
-    drawDieOnCanvas(ctx, die);
-}
-
 // Function to check if mouse is over a die
 function isOverDie(mouseX, mouseY, die) {
     const scaledSize = canvas.width / 22;
-    const dx = mouseX - die.x;
-    const dy = mouseY - die.y;
+    const dx = mouseX - (die.x * canvas.width);
+    const dy = mouseY - (die.y * canvas.height);
     const distance = Math.sqrt(dx * dx + dy * dy);
     return distance < scaledSize / 2;
 }
@@ -433,8 +429,6 @@ canvas.addEventListener("mousedown", (event) => {
             // Start dragging this die
             draggingDice = true;
             selectedDie = clickedDie;
-            lastDragX = mousePos.x;
-            lastDragY = mousePos.y;
             
             // Redraw background once before starting drag
             redrawBackgroundCanvas();
@@ -442,6 +436,8 @@ canvas.addEventListener("mousedown", (event) => {
         } else {
             // Drop new dice at the cursor position
             socket.emit("dropDice", { 
+                canvasWidth: canvas.width,
+                canvasHeight: canvas.height,
                 x: mousePos.x,
                 y: mousePos.y,
                 size: 20, 
@@ -466,7 +462,7 @@ canvas.addEventListener("mousedown", (event) => {
     } 
 });
 
-canvas.addEventListener("mouseup", (event) => {
+canvas.addEventListener("mouseup", () => {
     if (drawingToggle) {
         drawing = false;
     }
@@ -475,11 +471,22 @@ canvas.addEventListener("mouseup", (event) => {
     if (draggingDice && selectedDie) {
         draggingDice = false;
         
+        const notMoved = selectedDie.x < 1 && selectedDie.y < 1;
+
+        let diceX = notMoved ? selectedDie.x * canvas.width : selectedDie.x;
+        let diceY = notMoved ? selectedDie.y * canvas.height : selectedDie.y;
+
+        if (notMoved) {
+            diceX = diceX * canvas.width;
+            diceY = diceY * canvas.height;
+        }
         // Final update to server
         socket.emit("moveDie", {
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height,
             id: selectedDie.id,
-            x: selectedDie.x,
-            y: selectedDie.y
+            x: diceX,
+            y: diceY
         });
         
         // Reset selection and redraw everything
@@ -500,6 +507,8 @@ canvas.addEventListener("mouseleave", () => {
         // Final update to server if we have a selected die
         if (selectedDie) {
             socket.emit("moveDie", {
+                canvasWidth: canvas.width,
+                canvasHeight: canvas.height,
                 id: selectedDie.id,
                 x: selectedDie.x,
                 y: selectedDie.y
@@ -522,7 +531,6 @@ canvas.addEventListener("mousemove", (event) => {
         // Update the die position
         selectedDie.x = x;
         selectedDie.y = y;
-        
         // Update the cached version too
         const dieIndex = localDiceCache.findIndex(die => die.id === selectedDie.id);
         if (dieIndex !== -1) {
@@ -537,6 +545,8 @@ canvas.addEventListener("mousemove", (event) => {
         const now = Date.now();
         if (now - lastEmitTime > EMIT_THROTTLE) {
             socket.emit("moveDie", {
+                canvasWidth: canvas.width,
+                canvasHeight: canvas.height,
                 id: selectedDie.id,
                 x: x,
                 y: y

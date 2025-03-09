@@ -50,9 +50,8 @@ io.on("connection", (socket) => {
         
         if (dieIndex !== -1) {
             // Update die position
-            diceHistory[dieIndex].x = moveData.x;
-            diceHistory[dieIndex].y = moveData.y;
-            
+            diceHistory[dieIndex].x = moveData.x / moveData.canvasWidth;
+            diceHistory[dieIndex].y = moveData.y / moveData.canvasHeight;
             // Broadcast the update to all clients
             io.emit("moveDie", diceHistory[dieIndex]);
         }
@@ -87,7 +86,7 @@ io.on("connection", (socket) => {
         let bCount = data.bCount;
         let lCount = data.lCount;
         const diceCount = bCount + lCount;
-        const spacing = 20;
+        const spacing = 40;
         const diceSize = data.size || 40; // Use provided size or default
         const maxRadius = 50 * data.spread + 100;
         const maxAttempts = 10; // Prevent infinite loops
@@ -110,8 +109,8 @@ io.on("connection", (socket) => {
 
                 newDie = {
                     id: uuidv4(), // Generate unique ID for each die
-                    x: data.x + Math.cos(angle) * radius,
-                    y: data.y + Math.sin(angle) * radius,
+                    x: (data.x + Math.cos(angle) * radius) / data.canvasWidth,
+                    y: (data.y + Math.sin(angle) * radius) / data.canvasHeight,
                     size: diceSize,
                     value: val
                 };
