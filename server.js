@@ -38,7 +38,12 @@ io.on("connection", (socket) => {
     });
 
     socket.on("erase", (data) => {
-        drawHistory.push({ ...data, erase: true });
+        drawHistory.push({
+            x: data.x / data.canvasWidth,
+            y: data.y / data.canvasHeight,
+            size: data.size,
+            erase: true
+        });
         socket.broadcast.emit("erase", data); // Send erase event to others
     });
 

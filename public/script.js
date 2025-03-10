@@ -698,14 +698,14 @@ canvas.addEventListener("mousemove", (event) => {
             const eraserSize = canvas.width/50;
             
             // Add to drawing history
-            drawHistory.push({ x, y, size: eraserSize, erase: true });
+            drawHistory.push({ x: x / canvas.width, y: y / canvas.height, size: eraserSize, erase: true });
             
             // Erase on both canvases
             eraseOnCanvas(ctx, x, y, eraserSize);
             eraseOnCanvas(backgroundCtx, x, y, eraserSize);
             
             // Send erase action to others
-            socket.emit("erase", { x, y, size: eraserSize });
+            socket.emit("erase", { x, y, size: eraserSize, canvasWidth: canvas.width, canvasHeight: canvas.height });
         } else if (drawingToggle && mouseDown) {
             // Scale line width relative to canvas size
             const lineWidth = canvas.width/300;
@@ -803,7 +803,6 @@ socket.on("erase", (data) => {
     drawHistory.push({ ...data, erase: true }); // Add to local history
     
     // Erase on both canvases
-    erase(data.x, data.y, data.size);
     eraseOnCanvas(ctx, data.x, data.y, data.size);
     eraseOnCanvas(backgroundCtx, data.x, data.y, data.size);
 });
