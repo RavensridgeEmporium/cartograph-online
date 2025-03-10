@@ -84,8 +84,8 @@ h1 {
 
 canvas {
     background-color: var(--canvas-color);
-    border: 8px solid var(--primary-color);
-    border-radius: 8px;
+    /* border: 8px solid var(--primary-color); */
+    /* border-radius: 8px; */
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     width: 100%;
 }
@@ -129,6 +129,7 @@ footer {
     background-color: var(--primary-color);
     color: var(--canvas-color);
     transform: scale(1.1);
+    cursor: pointer;
 }
 
 .btn-icon {
@@ -237,6 +238,7 @@ footer {
     background-color: var(--primary-color);
     color: var(--canvas-color);
     transform: scale(1.1);
+    cursor: pointer;
 }
 
 /* Stamp Sidebar */
@@ -271,6 +273,7 @@ footer {
 }
 
 #stamp-toolbar img:hover {
+    cursor: pointer;
     transform: scale(1.1);
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
@@ -285,4 +288,21 @@ footer {
     background-color: #74baec;
     border: 2px solid #b5d3f0;
     transform: scale(1.1)
+}
+
+/* Text Input */
+
+#text-tool-input {
+    position: absolute;
+    display: none; /* Initially hidden */
+    font-family: 'IM Fell English SC', serif;
+    border: none;
+    margin: 0;
+    background: transparent;
+    color: black;
+    padding: 0;
+    resize: none;
+    outline: none;
+    overflow: hidden;
+    z-index: 1000;
 }

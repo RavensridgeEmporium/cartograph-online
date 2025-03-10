@@ -6,14 +6,17 @@ const drawModeCheckbox = document.getElementById("drawMode");
 const eraseModeCheckbox = document.getElementById("eraseMode");
 const diceModeCheckbox = document.getElementById("toggleDiceDrop");
 const stampModeCheckbox = document.getElementById("toggleStampMode");
+const textModeCheckbox = document.getElementById("toggleTextMode");
 const stampToolbar = document.getElementById("stamp-toolbar");
 const debug = document.getElementById("debug");
 const ctx = canvas.getContext("2d");
 const socket = io();
 const EMIT_THROTTLE = 50; // ms
+const TEXT_CALIBRATION_FACTOR = 0.65;
 const loadedDiceImages = [];
 const loadedStampImages = [];
 const diceSize = 24; //Larger number decreases the size 
+const textSize = 69;
 
 let lastEmitTime = 0;
 let biomeCount = 3;
@@ -22,6 +25,7 @@ let diceSpread = 1;
 let drawing = false;
 let erasing = false;
 let stamping = false;
+let writing = false;
 let diceDropMode = false;
 let draggingDice = false;
 let selectedDie = null;
@@ -29,12 +33,15 @@ let lastX = 0, lastY = 0;
 let drawHistory = [];
 let localDiceCache = [];
 let localStampCache = [];
+let localTextCache = [];
 let lastDragX = 0, lastDragY = 0;
 let mouseDown = false;
 let drawingToggle = false;
 let prevCanvasWidth = canvas.width;
 let prevCanvasHeight = canvas.height;
 let selectedStampValue = 1;
+let textString = "Hello World!";
+let inTextbox = false;
 
 // Create a background canvas for double buffering
 const backgroundCanvas = document.createElement('canvas');
@@ -63,7 +70,8 @@ const stampImages = [
     "/assets/encampment.png",
     "/assets/town.png",
     "/assets/city.png",
-    "/assets/discovery.png"
+    "/assets/discovery.png",
+    "/assets/ruin.png"
 ];
 
 function biomeInc() {
@@ -121,6 +129,11 @@ function resizeCanvas() {
         canvas.width  = Math.floor(16*canvas.height/9);
         backgroundCanvas.height = window.innerHeight;
         backgroundCanvas.width  = Math.floor(16*canvas.height/9);
+    }
+
+    const textInput = document.getElementById("text-tool-input");
+    if (textInput.style.display === "block") {
+        textInput.style.fontSize = `${(canvas.width / textSize) * TEXT_CALIBRATION_FACTOR}px`;
     }
     
     // Redraw everything when canvas resizes
@@ -183,6 +196,10 @@ function redrawBackgroundCanvas() {
         drawStampOnCanvas(backgroundCtx, stamp);
     });
 
+    localTextCache.forEach(text => {
+        drawTextOnCanvas(backgroundCtx, text);
+    });
+
     prevCanvasWidth = canvas.width;
     prevCanvasHeight = canvas.height;
 }
@@ -212,11 +229,17 @@ function eraseOnCanvas(context, x, y, size) {
     context.clearRect(x - size / 2, y - size / 2, size, size);
 }
 
-function getMousePos(canvas, evt) {
+function getMousePos(canvas, evt, absolute=false) {
+    if (absolute) {
+        return {
+            x: evt.clientX,
+            y: evt.clientY,
+        }
+    }
     const rect = canvas.getBoundingClientRect();
     return {
-        x: (evt.clientX - rect.left) * (canvas.width / rect.width),
-        y: (evt.clientY - rect.top) * (canvas.height / rect.height)
+        x: (evt.clientX - rect.left) * (canvas.width / canvas.clientWidth),
+        y: (evt.clientY - rect.top) * (canvas.height / canvas.clientHeight)
     };
 }
 
@@ -257,6 +280,7 @@ function toggleAllButtonsOff() {
     eraseModeCheckbox.checked = false;
     stampModeCheckbox.checked = false;
     drawModeCheckbox.checked = false;
+    textModeCheckbox.checked = false;
 }
 
 // Init
@@ -276,8 +300,10 @@ drawModeCheckbox.addEventListener("change", () => {
         diceModeCheckbox.checked = false;
         eraseModeCheckbox.checked = false;
         stampModeCheckbox.checked = false;
+        textModeCheckbox.checked = false;
         stamping = false;
         erasing = false;
+        writing = false;
         diceDropMode = false;
         drawingToggle = true;
         updateStampToolbar();
@@ -291,8 +317,10 @@ eraseModeCheckbox.addEventListener("change", () => {
         diceModeCheckbox.checked = false;
         stampModeCheckbox.checked = false;
         drawModeCheckbox.checked = false;
+        textModeCheckbox.checked = false;
         stamping = false;
         erasing = true;
+        writing = false;
         diceDropMode = false;
         drawingToggle = false;
         updateStampToolbar();
@@ -306,8 +334,10 @@ diceModeCheckbox.addEventListener("change", () => {
         eraseModeCheckbox.checked = false;
         stampModeCheckbox.checked = false;
         drawModeCheckbox.checked = false;
+        textModeCheckbox.checked = false;
         diceDropMode = true;
         erasing = false;
+        writing = false;
         stamping = false;
         drawingToggle = false;
         updateStampToolbar();
@@ -321,12 +351,31 @@ stampModeCheckbox.addEventListener("change", () => {
         eraseModeCheckbox.checked = false;
         diceModeCheckbox.checked = false;
         drawModeCheckbox.checked = false;
+        textModeCheckbox.checked = false;
         erasing = false;
+        writing = false;
         diceDropMode = false;
         drawingToggle = false;
         stamping = true;
     } else {
         stamping = false;
+    }
+    updateStampToolbar();
+});
+
+textModeCheckbox.addEventListener("change", () => {
+    if (textModeCheckbox.checked) {
+        eraseModeCheckbox.checked = false;
+        diceModeCheckbox.checked = false;
+        drawModeCheckbox.checked = false;
+        stampModeCheckbox.checked = false;
+        erasing = false;
+        diceDropMode = false;
+        drawingToggle = false;
+        stamping = false;
+        writing = true;
+    } else {
+        writing = false;
     }
     updateStampToolbar();
 });
@@ -342,7 +391,8 @@ document.getElementById("clearCanvas").addEventListener("click", () => {
     socket.emit("clearCanvas");
     localDiceCache = []; // Clear local dice cache
     localStampCache = [];
-    drawHistory = []
+    drawHistory = [];
+    localTextCache = [];
     redrawBackgroundCanvas();
     redrawCanvas();
 });
@@ -393,8 +443,18 @@ function drawStampOnCanvas(context, stamp) {
             scaledSize
         );
     }
-}
-// Function to draw a die on any context
+};
+
+function drawTextOnCanvas(context, text) {
+    if (!text) return;
+    const fontsize = canvas.width / textSize;
+    const alreadyScaled = text.x > 1 || text.y > 1;
+    const absoluteX = alreadyScaled ? text.x : text.x * canvas.width;
+    const absoluteY = alreadyScaled ? text.y : text.y * canvas.height;
+    context.font = `${fontsize}px 'IM Fell English SC', serif`;
+    context.fillText(text.value, absoluteX, absoluteY);
+};
+
 function drawDieOnCanvas(context, die) {
     if (!die) return;
     // Scale die size relative to canvas dimensions
@@ -424,7 +484,6 @@ function drawDieOnCanvas(context, die) {
     }
 }
 
-// Function to check if mouse is over a die
 function isOverDie(mouseX, mouseY, die) {
     const scaledSize = canvas.width / diceSize;
     const dx = mouseX - (die.x * canvas.width);
@@ -433,7 +492,6 @@ function isOverDie(mouseX, mouseY, die) {
     return distance < scaledSize / 2;
 }
 
-// Function to find die under cursor
 function findDieUnderCursor(mouseX, mouseY) {
     // Search in reverse order so we get the top-most die first
     for (let i = localDiceCache.length - 1; i >= 0; i--) {
@@ -443,6 +501,44 @@ function findDieUnderCursor(mouseX, mouseY) {
     }
     return null;
 }
+
+function commitTextToCanvas(textInput, x, y) {
+    textString = textInput.value.trim();
+
+    if (textString) {
+        const baselineAdjustment = (canvas.width / textSize) * 0.1;
+
+        socket.emit("writeText", {
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height, 
+            x: x, 
+            y: y + baselineAdjustment,
+            size: textSize, 
+            value: textString
+        })
+    }
+    inTextbox = false;
+    textInput.value = "";
+    textInput.style.display = "none";
+}
+
+function showTextInput(screenX, screenY, canvasX, canvasY) {
+    inTextbox = true;
+    const textInput = document.getElementById("text-tool-input");
+    const fontsize = (canvas.width / textSize) * TEXT_CALIBRATION_FACTOR;
+    const textBoxHeight = 40;
+
+    textInput.style.left = `${screenX}px`;
+    textInput.style.top = `${screenY  - textBoxHeight/2}px`;
+    textInput.style.width = "700px";
+    textInput.style.height = `${textBoxHeight}px`;
+    textInput.style.display = "block";
+    textInput.style.fontSize = `${fontsize}px`
+    setTimeout(() => textInput.focus(), 10);
+    textInput.onblur = function() {
+        commitTextToCanvas(textInput, canvasX, canvasY);
+    }
+};
 
 //User Inputs
 canvas.addEventListener("mousedown", (event) => {
@@ -483,6 +579,10 @@ canvas.addEventListener("mousedown", (event) => {
             size: 40, 
             value: selectedStampValue
         })
+    } else if (writing && !inTextbox) {
+        const screenPos = getMousePos(canvas, event, true);
+        const canvasPos = getMousePos(canvas, event);
+        showTextInput(screenPos.x, screenPos.y, canvasPos.x, canvasPos.y);
     } else {
         // Normal drawing behavior
         drawing = true;
@@ -557,7 +657,6 @@ canvas.addEventListener("mousemove", (event) => {
     const y = mousePos.y;
     
     if (draggingDice && selectedDie) {
-        // Update the die position
         selectedDie.x = x;
         selectedDie.y = y;
         // Update the cached version too
@@ -643,13 +742,19 @@ socket.on("dropDice", (diceData) => {
 
 socket.on("dropStamp", (stampData) => {
     if (Array.isArray(stampData)) {
-        localStampCache = stampData
+        localStampCache = stampData;
+        redrawBackgroundCanvas();
+        redrawCanvas();
+    }
+});
+socket.on("writeText", (textData) => {
+    if (Array.isArray(textData)) {
+        localTextCache = textData;
         redrawBackgroundCanvas();
         redrawCanvas();
     }
 });
 
-// Handle single die movement updates
 socket.on("moveDie", (updatedDie) => {
     // Update the die in local cache
     const dieIndex = localDiceCache.findIndex(die => die.id === updatedDie.id);
@@ -673,19 +778,18 @@ socket.on("clearDice", () => {
 socket.on("clearCanvas", () => {
     localStampCache = [];
     localDiceCache = [];
+    localTextCache = [];
     drawHistory = [];
     redrawBackgroundCanvas();
     redrawCanvas();
 });
 
-// Receive drawing history
 socket.on("drawHistory", (history) => {
     drawHistory = history; // Store locally
     redrawBackgroundCanvas();
     redrawCanvas();
 });
 
-// Receive drawing updates from server
 socket.on("draw", (data) => {
     drawHistory.push(data); // Add to local history
     
@@ -695,7 +799,6 @@ socket.on("draw", (data) => {
     drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, "black", lineWidth);
 });
 
-// Receive erase updates from server
 socket.on("erase", (data) => {
     drawHistory.push({ ...data, erase: true }); // Add to local history
     
@@ -705,7 +808,6 @@ socket.on("erase", (data) => {
     eraseOnCanvas(backgroundCtx, data.x, data.y, data.size);
 });
 
-// Request drawing history when reconnecting
 socket.on("connect", () => {
     socket.emit("requestHistory");
 });

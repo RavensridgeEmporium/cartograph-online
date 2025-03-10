@@ -1,6 +1,7 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const { text } = require("stream/consumers");
 const { v4: uuidv4 } = require('uuid'); // You'll need to install this: npm install uuid
 
 const app = express();
@@ -13,6 +14,7 @@ app.use("/dice_faces", express.static(__dirname + "/public/dice_faces"));
 let drawHistory = []; // Store all drawn lines
 let diceHistory = []; // Store all dice
 let stampHistory = []; //Store all stamps
+let textHistory = []; //Store all texts
 
 io.on("connection", (socket) => {
     console.log("A user connected");
@@ -20,11 +22,14 @@ io.on("connection", (socket) => {
     socket.emit("drawHistory", drawHistory);
     socket.emit("dropDice", diceHistory);
     socket.emit("dropStamp", stampHistory);
+    socket.emit("writeText", textHistory);
 
     // Add handler for history requests (for canvas resize)
     socket.on("requestHistory", () => {
         socket.emit("drawHistory", drawHistory);
         socket.emit("dropDice", diceHistory);
+        socket.emit("dropStamp", stampHistory);
+        socket.emit("writeText", textHistory);
     });
 
     socket.on("draw", (data) => {
@@ -47,6 +52,7 @@ io.on("connection", (socket) => {
         diceHistory = []; // Clear dice history
         drawHistory = [];
         stampHistory = [];
+        textHistory = [];
         io.emit("clearCanvas"); // Notify all users
         io.emit("dropDice", []); // Send empty dice array to clear dice
     });
@@ -73,6 +79,17 @@ io.on("connection", (socket) => {
             return distance < (newDie.size + spacing); // Dice are too close
         });
     }
+
+    socket.on("writeText", (data) => {
+        newText = {
+            x: data.x / data.canvasWidth,
+            y: data.y / data.canvasHeight,
+            size: data.size,
+            value: data.value
+        };
+        textHistory.push(newText);
+        io.emit("writeText", textHistory);
+    });
 
     socket.on("dropStamp", (data) => {
         newStamp = {

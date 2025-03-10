@@ -11,8 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="stamp-toolbar" class="hidden">
-    </div>
+    <div id="stamp-toolbar" class="hidden"></div>
+    <textarea id="text-tool-input"></textarea>
     <div class="container">
         <header>
             <h1>Cartograph Online</h1>
@@ -38,6 +38,11 @@
                 <input type="checkbox" id="toggleStampMode">
                 <span class="btn-icon">🌲</span>
                 <span class="btn-text">Stamp Mode</span>
+            </label>
+            <label class="toggle-btn">
+                <input type="checkbox" id="toggleTextMode">
+                <span class="btn-icon">🏷️</span>
+                <span class="btn-text">Text Mode</span>
             </label>
             <button id="clearDice" class="tool-btn">
                 <span class="btn-icon">🗑️</span>
