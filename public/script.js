@@ -13,6 +13,7 @@ const socket = io();
 const EMIT_THROTTLE = 50; // ms
 const loadedDiceImages = [];
 const loadedStampImages = [];
+const diceSize = 24; //Larger number decreases the size 
 
 let lastEmitTime = 0;
 let biomeCount = 3;
@@ -397,7 +398,7 @@ function drawStampOnCanvas(context, stamp) {
 function drawDieOnCanvas(context, die) {
     if (!die) return;
     // Scale die size relative to canvas dimensions
-    const scaledSize = canvas.width / 20;
+    const scaledSize = canvas.width / diceSize;
     const alreadyScaled = die.x > 1 || die.y > 1;
     const absoluteX = alreadyScaled ? die.x : die.x * canvas.width;
     const absoluteY = alreadyScaled ? die.y : die.y * canvas.height;
@@ -425,7 +426,7 @@ function drawDieOnCanvas(context, die) {
 
 // Function to check if mouse is over a die
 function isOverDie(mouseX, mouseY, die) {
-    const scaledSize = canvas.width / 22;
+    const scaledSize = canvas.width / diceSize;
     const dx = mouseX - (die.x * canvas.width);
     const dy = mouseY - (die.y * canvas.height);
     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -466,7 +467,7 @@ canvas.addEventListener("mousedown", (event) => {
                 canvasHeight: canvas.height,
                 x: mousePos.x,
                 y: mousePos.y,
-                size: 20, 
+                size: diceSize, 
                 bCount: biomeCount,
                 lCount: landmarkCount,
                 spread: diceSpread

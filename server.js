@@ -65,10 +65,10 @@ io.on("connection", (socket) => {
         }
     });
 
-    function isOverlapping(newDie, existingDice, spacing) {
+    function isOverlapping(newDie, existingDice, spacing, canvasWidth, canvasHeight) {
         return existingDice.some(die => {
-            const dx = newDie.x - die.x;
-            const dy = newDie.y - die.y;
+            const dx = (newDie.x * canvasWidth) - (die.x * canvasWidth);
+            const dy = (newDie.y * canvasHeight) - (die.y * canvasHeight);
             const distance = Math.sqrt(dx * dx + dy * dy);
             return distance < (newDie.size + spacing); // Dice are too close
         });
@@ -90,9 +90,9 @@ io.on("connection", (socket) => {
         let bCount = data.bCount;
         let lCount = data.lCount;
         const diceCount = bCount + lCount;
-        const spacing = 40;
-        const diceSize = data.size || 40; // Use provided size or default
-        const maxRadius = 50 * data.spread + 100;
+        const spacing = 100;
+        const diceSize = data.size;
+        const maxRadius = 50 * data.spread + 200;
         const maxAttempts = 10; // Prevent infinite loops
     
         for (let i = 0; i < diceCount; i++) {
@@ -110,17 +110,17 @@ io.on("connection", (socket) => {
             do {
                 const angle = Math.random() * 2 * Math.PI;
                 const radius = Math.random() * maxRadius;
-
+                let rawX = Math.min(Math.max((data.x + Math.cos(angle) * radius), diceSize), data.canvasWidth - diceSize);
+                let rawY = Math.min(Math.max((data.y + Math.sin(angle) * radius), diceSize), data.canvasHeight - diceSize);
                 newDie = {
                     id: uuidv4(), // Generate unique ID for each die
-                    x: (data.x + Math.cos(angle) * radius) / data.canvasWidth,
-                    y: (data.y + Math.sin(angle) * radius) / data.canvasHeight,
+                    x: rawX / data.canvasWidth,
+                    y: rawY / data.canvasHeight,
                     size: diceSize,
                     value: val
                 };
                 attempts++;
-            } while (isOverlapping(newDie, diceHistory, spacing) && attempts < maxAttempts);
-    
+            } while (isOverlapping(newDie, diceHistory, spacing, data.canvasWidth, data.canvasHeight) && attempts < maxAttempts);
             diceHistory.push(newDie);
         }
     
