@@ -73,9 +73,13 @@ h1 {
 
 .tagline {
     font-family: 'Crimson Pro', serif;
-    font-style: italic;
     color: var(--accent-color);
-    font-size: 1.2rem;
+    font-size: 1.4rem;
+    text-decoration: none;
+}
+
+.tagline:hover {
+    font-weight: 600;
 }
 
 canvas {
@@ -145,7 +149,6 @@ footer {
     font-family: 'Crimson Pro', serif;
     font-weight: 600;
     font-size: 1rem;
-    cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     user-select: none;

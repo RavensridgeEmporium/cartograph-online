@@ -1,5 +1,1 @@
-- [ ] Fix layout to use grid maybe?
-- [ ] Fix dice spread to be a chevron to match the others
 - [ ] Add link to Ravensridge in the footer
-- [ ] Fix row padding / margins to take up less space
-- [ ] Fix dice spreading and overlapping
