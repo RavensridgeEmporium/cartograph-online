@@ -229,18 +229,21 @@ function updateStampToolbar() {
 
             stampToolbar.appendChild(img);
         });
+        highlightSelectedStamp();
 
         stampToolbar.classList.add("show");
     } else {
         stampToolbar.classList.remove("show");
     }
 }
+
 function toggleAllButtonsOff() {
     diceModeCheckbox.checked = false;
     eraseModeCheckbox.checked = false;
     stampModeCheckbox.checked = false;
     drawModeCheckbox.checked = false;
 }
+
 // Init
 resizeCanvas();
 preloadDiceImages();
@@ -430,52 +433,7 @@ function findDieUnderCursor(mouseX, mouseY) {
     return null;
 }
 
-// Receive and draw dice from other users
-socket.on("dropDice", (diceData) => {
-    if (Array.isArray(diceData)) {
-        localDiceCache = diceData;
-        redrawBackgroundCanvas();
-        redrawCanvas();
-    }
-});
-
-socket.on("dropStamp", (stampData) => {
-    if (Array.isArray(stampData)) {
-        localStampCache = stampData
-        redrawBackgroundCanvas();
-        redrawCanvas();
-    }
-});
-
-// Handle single die movement updates
-socket.on("moveDie", (updatedDie) => {
-    // Update the die in local cache
-    const dieIndex = localDiceCache.findIndex(die => die.id === updatedDie.id);
-    if (dieIndex !== -1) {
-        localDiceCache[dieIndex] = updatedDie;
-        
-        // Only redraw if we're not the one dragging
-        if (!draggingDice || (selectedDie && selectedDie.id !== updatedDie.id)) {
-            redrawBackgroundCanvas();
-            redrawCanvas();
-        }
-    }
-});
-
-socket.on("clearDice", () => {
-    localDiceCache = [];
-    redrawBackgroundCanvas();
-    redrawCanvas();
-});
-
-socket.on("clearCanvas", () => {
-    localStampCache = [];
-    localDiceCache = [];
-    drawHistory = [];
-    redrawBackgroundCanvas();
-    redrawCanvas();
-});
-
+//User Inputs
 canvas.addEventListener("mousedown", (event) => {
     const mousePos = getMousePos(canvas, event);
     mouseDown = true;
@@ -663,6 +621,51 @@ canvas.addEventListener("mousemove", (event) => {
     }
 });
 
+// Receive and draw dice from other users
+socket.on("dropDice", (diceData) => {
+    if (Array.isArray(diceData)) {
+        localDiceCache = diceData;
+        redrawBackgroundCanvas();
+        redrawCanvas();
+    }
+});
+
+socket.on("dropStamp", (stampData) => {
+    if (Array.isArray(stampData)) {
+        localStampCache = stampData
+        redrawBackgroundCanvas();
+        redrawCanvas();
+    }
+});
+
+// Handle single die movement updates
+socket.on("moveDie", (updatedDie) => {
+    // Update the die in local cache
+    const dieIndex = localDiceCache.findIndex(die => die.id === updatedDie.id);
+    if (dieIndex !== -1) {
+        localDiceCache[dieIndex] = updatedDie;
+        
+        // Only redraw if we're not the one dragging
+        if (!draggingDice || (selectedDie && selectedDie.id !== updatedDie.id)) {
+            redrawBackgroundCanvas();
+            redrawCanvas();
+        }
+    }
+});
+
+socket.on("clearDice", () => {
+    localDiceCache = [];
+    redrawBackgroundCanvas();
+    redrawCanvas();
+});
+
+socket.on("clearCanvas", () => {
+    localStampCache = [];
+    localDiceCache = [];
+    drawHistory = [];
+    redrawBackgroundCanvas();
+    redrawCanvas();
+});
 
 // Receive drawing history
 socket.on("drawHistory", (history) => {
