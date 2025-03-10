@@ -1,7 +1,7 @@
 const canvas = document.getElementById("whiteboard");
 const bcount = document.getElementById("biomeCount");
 const lcount = document.getElementById("landmarkCount");
-const diceSpreadRange = document.getElementById("diceSpreadRange");
+const diceSpreadRange = document.getElementById("diceSpread");
 const drawModeCheckbox = document.getElementById("drawMode");
 const eraseModeCheckbox = document.getElementById("eraseMode");
 const diceModeCheckbox = document.getElementById("toggleDiceDrop");
@@ -91,6 +91,20 @@ function landmarkDec() {
 
 function landmarkUpdate() {
     lcount.textContent = landmarkCount;
+}
+
+function diceSpreadInc() {
+    diceSpread++;
+    diceSpreadUpdate();
+}
+
+function diceSpreadDec() {
+    diceSpread = diceSpread > 0 ? diceSpread - 1 : 0;
+    diceSpreadUpdate();
+}
+
+function diceSpreadUpdate() {
+    diceSpreadRange.textContent = diceSpread;
 }
 
 function resizeCanvas() {
@@ -254,10 +268,6 @@ toggleAllButtonsOff();
 // Handle window resize events
 window.addEventListener('resize', () => {
     resizeCanvas();
-});
-
-diceSpreadRange.addEventListener("change", () => {
-    diceSpread = diceSpreadRange.value;
 });
 
 drawModeCheckbox.addEventListener("change", () => {

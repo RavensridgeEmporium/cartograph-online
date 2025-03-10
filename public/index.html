@@ -51,28 +51,32 @@
                 <span class="btn-text">Download Map</span>
             </button>
         </div>
-        <div class="toolbar">
+        <div class="toolbar-2">
             <div class="counter">
                 <p>Biome dice</p>
-                <p id="biomeCount">3</p>
                 <div class="chevron-buttons">
-                    <button onclick="biomeInc()" class="chevron-btn">▲</button>
-                    <button onclick="biomeDec()" class="chevron-btn">▼</button>  
+                    <button onclick="biomeDec()" class="chevron-btn">◀</button>
+                    <p class="counter-value"  id="biomeCount">3</p>
+                    <button onclick="biomeInc()" class="chevron-btn">▶</button>  
                 </div>
             </div>
             
             <div class="counter">
                 <p>Landmark dice</p>
-                <p id="landmarkCount">1</p>
                 <div class="chevron-buttons">
-                    <button onclick="landmarkInc()" class="chevron-btn">▲</button>
-                    <button onclick="landmarkDec()" class="chevron-btn">▼</button>
+                    <button onclick="landmarkDec()" class="chevron-btn">◀</button>
+                    <p class="counter-value" id="landmarkCount">1</p>
+                    <button onclick="landmarkInc()" class="chevron-btn">▶</button>
                 </div>
             </div>
-            <p>Dice roll spread</p>
-            <div class="slidecontainer">
-                <input type="range" min="1" max="10" value="1" class="slider" id="diceSpreadRange">
-              </div>
+            <div class="counter">
+                <p>Dice spread</p>
+                <div class="chevron-buttons">
+                    <button onclick="diceSpreadDec()" class="chevron-btn">◀</button>
+                    <p class="counter-value"  id="diceSpread">1</p>
+                    <button onclick="diceSpreadInc()" class="chevron-btn">▶</button>
+                </div>
+            </div>
         </div>
         <div class="canvas-container">
             <canvas id="whiteboard"></canvas>
