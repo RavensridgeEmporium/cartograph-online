@@ -11,20 +11,23 @@ const canvas = document.getElementById("whiteboard");
 const ctx = canvas.getContext("2d");
 const backgroundCanvas = document.getElementById('backgroundWhiteboard');
 const backgroundCtx = backgroundCanvas.getContext('2d');
+const canvasContainer = document.getElementById("canvas-container");
 
 const socket = io();
 
 const TEXT_CALIBRATION_FACTOR = 0.65;
 const loadedDiceImages = [];
 const loadedStampImages = [];
-const textSize = 69;
-const eraseSize = 25.0;
-const drawSizeFactor = 0.004;
-let drawSize = Math.min(canvas.width, canvas.height) * drawSizeFactor;
-const stampSizeFactor = 0.08;
-let stampSize = Math.min(canvas.width, canvas.height) * stampSizeFactor;
-const diceSizeFactor = 0.075;
-let diceSize = Math.min(canvas.width, canvas.height) * diceSizeFactor;
+const drawSizeFactor = 0.0025;
+let drawSize = canvas.width * drawSizeFactor;
+const eraserSizeFactor = 0.004;
+let eraserSize = canvas.width * drawSizeFactor;
+const stampSizeFactor = 0.04;
+let stampSize = canvas.width * stampSizeFactor;
+const diceSizeFactor = 0.035;
+let diceSize = canvas.width * diceSizeFactor;
+const textSizeFactor = 0.018;
+let textSize = canvas.width * textSizeFactor;
 
 let currentTool = 'none';
 let biomeCount = 3;
@@ -36,6 +39,13 @@ let mouseDown = false;
 let selectedStampValue = 1;
 let draggingDie = false;
 let dieBeingDragged = { id: null };
+let textInput = null;
+let textPosition = { x: 0, y: 0};
+
+const textOptions = {
+    font: textSize + 'px Crimson Pro',
+    fillStyle: '#000000'
+};
 
 const diceImages = [
     "/dice_faces/face1.png",
@@ -111,9 +121,10 @@ function resizeCanvas() {
         backgroundCanvas.height = window.innerHeight;
         backgroundCanvas.width  = Math.floor(16*canvas.height/9);
     }
-    diceSize = Math.min(canvas.width, canvas.height) * diceSizeFactor;
-    stampSize = Math.min(canvas.width, canvas.height) * stampSizeFactor;
-    drawSize = Math.min(canvas.width, canvas.height) * drawSizeFactor;
+    diceSize = canvas.width * diceSizeFactor;
+    stampSize = canvas.width * stampSizeFactor;
+    drawSize = canvas.width * drawSizeFactor;
+    textSize = canvas.width * textSizeFactor;
     socket.emit("redrawAll");
 }
 
@@ -136,7 +147,7 @@ function preloadStampImages() {
 function redrawStrokes(dataArray) {
     dataArray.forEach((data) => {
         if (data.erase) {
-            eraseOnCanvas(backgroundCtx, data.x, data.y, eraseSize);
+            eraseOnCanvas(backgroundCtx, data.x, data.y, eraserSize);
         } else {
             drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, "black", drawSize);
         }
@@ -152,6 +163,12 @@ function redawStamps(dataArray) {
 function redrawDice(dataArray) {
     dataArray.forEach((data) => {
         drawDiceOnCanvas(ctx, data.x, data.y, diceSize, data.value);
+    });
+}
+
+function redrawText(dataArray) {
+    dataArray.forEach((data) => {
+        drawTextOnCanvas(backgroundCtx, data.x, data.y, data.text);
     });
 }
 
@@ -193,6 +210,74 @@ function drawDiceOnCanvas(context, x, y, size, value) {
             size
         );
     }
+}
+
+function drawTextOnCanvas(context, x, y, text) {
+    context.font = textSize + 'px Crimson Pro';
+    context.fillStyle = textOptions.fillStyle;
+    context.fillText(text, x * canvas.width, (y * canvas.height));
+}
+
+function commitText() {
+    if (!textInput) return;
+
+    const text = textInput.innerText || textInput.textContent;
+
+    if (text.trim() !== '') {
+        // backgroundCtx.fillText(text, textPosition.x, textPosition.y + parseInt(textOptions.font, 10) * 0.75);
+
+        socket.emit("commitText", {
+            text: text,
+            x: textPosition.x, 
+            y: textPosition.y + (textSize*0.51),
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height
+        });
+    }
+    canvasContainer.removeChild(textInput);
+    textInput = null;
+}
+
+function createTextInput(x, y) {
+    if (textInput) {
+        canvasContainer.removeChild(textInput);
+    }
+    textPosition = { x, y };
+
+    textInput = document.createElement('div');
+    textInput.contentEditable = true;
+    textInput.style.position = 'absolute';
+    textInput.style.textAlign = 'center';
+    textInput.style.left = `${(x / canvas.width) * canvas.offsetWidth}px`;
+    textInput.style.top = `${(y / canvas.height) * canvas.offsetHeight - (textSize/2)}px`;
+    textInput.style.minWidth = '20px';
+    // textInput.style.minHeight = '1em';
+    textInput.style.padding = '0';
+    textInput.style.margin = '0';
+    textInput.style.background = 'transparent';
+    textInput.style.border = '1px dashed #999';
+    // textInput.style.fontFamily = textOptions.font.split(' ').slice(1).join(' '); // Extract font family
+    // textInput.style.fontSize = `${textSize}px`;
+    textInput.style.font = textSize + 'px Crimson Pro';
+    textInput.style.color = textOptions.fillStyle;
+    textInput.style.zIndex = '4';
+
+    canvasContainer.appendChild(textInput);
+    setTimeout(() => {
+        textInput.focus();
+      }, 0);
+
+    textInput.addEventListener('blur', commitText);
+    textInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            commitText();
+        }
+        if (e.key === 'Escape') {
+            canvasContainer.removeChild(textInput);
+            textInput = null;
+        }
+    });
 }
 
 function getMousePos(canvas, evt) {
@@ -309,11 +394,15 @@ textModeCheckbox.addEventListener("change", () => {
         currentTool = "text";
         drawing = false;
     }
-eStampToolbar();
+    updateStampToolbar();
 });
 
 document.getElementById("clearCanvas").addEventListener("click", () => {
     socket.emit("clearCanvas");
+});
+
+document.getElementById("clearDice").addEventListener("click", () => {
+    socket.emit("clearDice");
 });
 
 document.getElementById("downloadCanvas").addEventListener("click", () => {
@@ -368,6 +457,12 @@ canvas.addEventListener("mousedown", (event) => {
             y: mousePos.y,
             size: diceSize
         });
+    } else if (currentTool == "text") {
+        if (textInput) {
+            commitText();
+        } else {
+            createTextInput(mousePos.x, mousePos.y);
+        }  
     } else if (currentTool === "pen" || currentTool === "eraser") {
         drawing = true;
         lastX = mousePos.x;
@@ -442,7 +537,7 @@ socket.on("draw", (data) => {
 });
 
 socket.on("erase", (data) => {
-    eraseOnCanvas(backgroundCtx, data.x, data.y, eraseSize);
+    eraseOnCanvas(backgroundCtx, data.x, data.y, eraserSize);
 });
 
 socket.on("dropStamp", (stampData) => {
@@ -462,8 +557,16 @@ socket.on("updateDice", (data) => {
     redrawDice(data);
 });
 
+socket.on("writeText", (data) => {
+    drawTextOnCanvas(backgroundCtx, data.x, data.y, data.text);
+});
+
 socket.on("clearCanvas", () => {
     backgroundCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+    ctx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+});
+
+socket.on("clearDice", () => {
     ctx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
 });
 
@@ -477,4 +580,8 @@ socket.on("drawExistingStamps", (data) => {
 
 socket.on("drawExistingDice", (data) => {
     redrawDice(data);
+});
+
+socket.on("drawExistingText", (data) => {
+    redrawText(data);
 });

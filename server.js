@@ -17,14 +17,12 @@ let textHistory = [];
 
 io.on("connection", (socket) => {
     console.log("A user connected");
-    // socket.emit("drawExistingCanvas", drawHistory);
-    // socket.emit("drawExistingStamps", stampHistory);
-    // socket.emit("drawExistingDice", diceHistory);
 
     socket.on("redrawAll", () => {
-        socket.emit("drawExistingCanvas", drawHistory);
         socket.emit("drawExistingStamps", stampHistory);
         socket.emit("drawExistingDice", diceHistory);
+        socket.emit("drawExistingText", textHistory);
+        socket.emit("drawExistingCanvas", drawHistory);
     });
 
     socket.on("draw", (drawData) => {
@@ -48,7 +46,6 @@ io.on("connection", (socket) => {
     socket.on("clearDice", () => {
         diceHistory = []; // Clear dice history
         io.emit("clearDice"); // Notify all users
-        io.emit("dropDice", []); // Send empty dice array to clear dice
     });
 
     socket.on("clearCanvas", () => {
@@ -77,15 +74,14 @@ io.on("connection", (socket) => {
         });
     }
 
-    socket.on("writeText", (data) => {
+    socket.on("commitText", (data) => {
         newText = {
             x: data.x / data.canvasWidth,
             y: data.y / data.canvasHeight,
-            size: data.size,
-            value: data.value
+            text: data.text
         };
         textHistory.push(newText);
-        io.emit("writeText", textHistory);
+        io.emit("writeText", newText);
     });
 
     socket.on("dropStamp", (data) => {
@@ -171,8 +167,6 @@ io.on("connection", (socket) => {
 
         io.emit("updateDice", diceHistory);
     })
-
-    
 
     socket.on("disconnect", () => {
         console.log("A user disconnected");
