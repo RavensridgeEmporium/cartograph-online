@@ -20,8 +20,8 @@ const loadedDiceImages = [];
 const loadedStampImages = [];
 const drawSizeFactor = 0.0025;
 let drawSize = canvas.width * drawSizeFactor;
-const eraserSizeFactor = 0.004;
-let eraserSize = canvas.width * drawSizeFactor;
+const eraserSizeFactor = 0.01;
+let eraserSize = canvas.width * eraserSizeFactor;
 const stampSizeFactor = 0.04;
 let stampSize = canvas.width * stampSizeFactor;
 const diceSizeFactor = 0.035;
@@ -32,7 +32,7 @@ let textSize = canvas.width * textSizeFactor;
 let currentTool = 'none';
 let biomeCount = 3;
 let landmarkCount = 1;
-let diceSpread = 1;
+let diceSpread = 4;
 let drawing = false;
 let lastX = 0, lastY = 0;
 let mouseDown = false;
@@ -124,6 +124,7 @@ function resizeCanvas() {
     stampSize = canvas.width * stampSizeFactor;
     drawSize = canvas.width * drawSizeFactor;
     textSize = canvas.width * textSizeFactor;
+    eraserSize = canvas.width * eraserSizeFactor;
     socket.emit("redrawAll");
 }
 
@@ -340,10 +341,10 @@ drawModeCheckbox.addEventListener("change", () => {
         stampModeCheckbox.checked = false;
         textModeCheckbox.checked = false;
         currentTool = "pen";
-        updateStampToolbar();
     } else {
         currentTool = "none";
     }
+    updateStampToolbar();
 });
 
 eraseModeCheckbox.addEventListener("change", () => {
@@ -353,6 +354,8 @@ eraseModeCheckbox.addEventListener("change", () => {
         drawModeCheckbox.checked = false;
         textModeCheckbox.checked = false;
         currentTool = "eraser";
+    } else {
+        currentTool = "none";
     }
     updateStampToolbar();
 });
@@ -548,9 +551,7 @@ socket.on("dropStamp", (stampData) => {
 
 socket.on("dropDice", (data) => {
     data.forEach((die) => {
-        if (!die.moving) {
-            drawDiceOnCanvas(ctx, die.x, die.y, diceSize, die.value);
-        }
+        drawDiceOnCanvas(ctx, die.x, die.y, diceSize, die.value);
     });
 });
 

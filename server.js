@@ -2,26 +2,26 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static("public"));
-app.use("/dice_faces", express.static(__dirname + "/public/dice_faces"));
-
 const rooms = {};
 
 app.get('/', (req, res) => {
     const roomId = uuidv4().substring(0, 6);
-    res.redirect(`/${roomId}`);
-    console.log("room Id: ", roomId);
+    console.log("Redirecting to room:", roomId);
+    return res.redirect(`/${roomId}`);
 });
 
+app.use(express.static("public"));
+app.use("/dice_faces", express.static(__dirname + "/public/dice_faces"));
+
 // Handle room route
-app.get('/:roomId', (req, res) => {
+app.get('/:roomId([a-zA-Z0-9]{6})', (req, res) => {
     const roomId = req.params.roomId;
-    console.log(`User accessing room: ${roomId}`);
     if (!rooms[roomId]) {
         rooms[roomId] = {
             drawHistory: [],
@@ -30,27 +30,27 @@ app.get('/:roomId', (req, res) => {
             textHistory: [],
             lastActivity: Date.now()
         };
+        console.log(`Created new room: ${roomId}`);
+    } else {
+        console.log(`Joining existing room: ${roomId}`);
     }
     
-    res.sendFile(__dirname + '/public/index.html');
+    return res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Clean up inactive rooms periodically (optional)
 setInterval(() => {
     const now = Date.now();
     for (const roomId in rooms) {
-        // Remove rooms inactive for more than 24 hours
         if (now - rooms[roomId].lastActivity > 24 * 60 * 60 * 1000) {
             delete rooms[roomId];
         }
     }
-}, 60 * 60 * 1000); // Check every hour
+}, 60 * 60 * 1000);
 
 io.on("connection", (socket) => {
     console.log("A user connected");
     let currentRoom = null;
 
-    // Extract room ID from referer URL
     const referer = socket.handshake.headers.referer || '';
     const urlParts = referer.split('/');
     const roomId = urlParts[urlParts.length - 1];
@@ -59,7 +59,6 @@ io.on("connection", (socket) => {
         currentRoom = roomId;
         socket.join(roomId);
         
-        // Initialize room if it doesn't exist (fallback)
         if (!rooms[roomId]) {
             rooms[roomId] = {
                 drawHistory: [],
@@ -76,7 +75,6 @@ io.on("connection", (socket) => {
     socket.on("redrawAll", () => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
-        // Update room activity timestamp
         rooms[currentRoom].lastActivity = Date.now();
         
         socket.emit("drawExistingStamps", rooms[currentRoom].stampHistory);
@@ -88,7 +86,6 @@ io.on("connection", (socket) => {
     socket.on("draw", (drawData) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
-        // Update room activity timestamp
         rooms[currentRoom].lastActivity = Date.now();
         
         drawData.lastX = drawData.lastX / drawData.canvasWidth;
@@ -103,9 +100,7 @@ io.on("connection", (socket) => {
     socket.on("erase", (eraseData) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
-        // Update room activity timestamp
         rooms[currentRoom].lastActivity = Date.now();
-        
         eraseData.x = eraseData.x / eraseData.canvasWidth;
         eraseData.y = eraseData.y / eraseData.canvasHeight;
 
@@ -116,7 +111,6 @@ io.on("connection", (socket) => {
     socket.on("clearDice", () => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
-        // Update room activity timestamp
         rooms[currentRoom].lastActivity = Date.now();
         
         rooms[currentRoom].diceHistory = [];
@@ -126,7 +120,6 @@ io.on("connection", (socket) => {
     socket.on("clearCanvas", () => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
-        // Update room activity timestamp
         rooms[currentRoom].lastActivity = Date.now();
         
         rooms[currentRoom].diceHistory = [];
@@ -139,7 +132,6 @@ io.on("connection", (socket) => {
     socket.on("moveDie", (moveData) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
-        // Update room activity timestamp
         rooms[currentRoom].lastActivity = Date.now();
         
         const dieIndex = rooms[currentRoom].diceHistory.findIndex(die => die.id === moveData.id);
@@ -155,14 +147,13 @@ io.on("connection", (socket) => {
             const dx = (newDie.x * canvasWidth) - (die.x * canvasWidth);
             const dy = (newDie.y * canvasHeight) - (die.y * canvasHeight);
             const distance = Math.sqrt(dx * dx + dy * dy);
-            return distance < (newDie.size + spacing); // Dice are too close
+            return distance < (newDie.size + spacing);
         });
     }
 
     socket.on("commitText", (data) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
-        // Update room activity timestamp
         rooms[currentRoom].lastActivity = Date.now();
         
         newText = {
@@ -177,7 +168,6 @@ io.on("connection", (socket) => {
     socket.on("dropStamp", (data) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
-        // Update room activity timestamp
         rooms[currentRoom].lastActivity = Date.now();
         
         newStamp = {
@@ -193,7 +183,6 @@ io.on("connection", (socket) => {
     socket.on("dropDice", (data) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
-        // Update room activity timestamp
         rooms[currentRoom].lastActivity = Date.now();
         
         let bCount = data.bCount;
@@ -224,7 +213,7 @@ io.on("connection", (socket) => {
                 let rawX = Math.min(Math.max((data.x + Math.cos(angle) * radius), diceSize), data.canvasWidth - diceSize);
                 let rawY = Math.min(Math.max((data.y + Math.sin(angle) * radius), diceSize), data.canvasHeight - diceSize);
                 newDie = {
-                    id: uuidv4(), // Generate unique ID for each die
+                    id: uuidv4(),
                     x: rawX / data.canvasWidth,
                     y: rawY / data.canvasHeight,
                     value: val
@@ -254,22 +243,10 @@ io.on("connection", (socket) => {
         };
         for (let i = 0; i < rooms[currentRoom].diceHistory.length; i++) {
             if (isOverDie(data.x, data.y, rooms[currentRoom].diceHistory[i], data.canvasWidth, data.canvasHeight, data.size)) {
-                rooms[currentRoom].diceHistory[i].moving = true;
                 diceData.die = rooms[currentRoom].diceHistory[i];
             }
         }
         socket.emit("dieClickResult", diceData);
-    });
-
-    socket.on("stopDragging", (data) => {
-        if (!currentRoom || !rooms[currentRoom]) return;
-        
-        const dieIndex = rooms[currentRoom].diceHistory.findIndex(die => die.id === data.dieId);
-        if (dieIndex !== -1) {
-            rooms[currentRoom].diceHistory[dieIndex].moving = false;
-        }
-
-        io.to(currentRoom).emit("updateDice", rooms[currentRoom].diceHistory);
     });
 
     socket.on("disconnect", () => {
