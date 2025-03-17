@@ -347,6 +347,8 @@ drawModeCheckbox.addEventListener("change", () => {
         textModeCheckbox.checked = false;
         currentTool = "pen";
         updateStampToolbar();
+    } else {
+        currentTool = "none";
     }
 });
 
@@ -358,6 +360,8 @@ eraseModeCheckbox.addEventListener("change", () => {
         textModeCheckbox.checked = false;
         currentTool = "eraser";
         updateStampToolbar();
+    } else {
+        currentTool = "none";
     }
 });
 
@@ -370,6 +374,8 @@ diceModeCheckbox.addEventListener("change", () => {
         currentTool = "dice";
         drawing = false;
         updateStampToolbar();
+    } else {
+        currentTool = "none";
     }
 });
 
@@ -381,6 +387,8 @@ stampModeCheckbox.addEventListener("change", () => {
         textModeCheckbox.checked = false;
         currentTool = "stamp";
         drawing = false;
+    } else {
+        currentTool = "none";
     }
     updateStampToolbar();
 });
@@ -393,6 +401,8 @@ textModeCheckbox.addEventListener("change", () => {
         stampModeCheckbox.checked = false;
         currentTool = "text";
         drawing = false;
+    } else {
+        currentTool = "none";
     }
     updateStampToolbar();
 });
