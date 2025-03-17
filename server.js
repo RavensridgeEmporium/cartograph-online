@@ -1,7 +1,6 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const { text } = require("stream/consumers");
 const { v4: uuidv4 } = require('uuid'); // You'll need to install this: npm install uuid
 
 const app = express();
@@ -11,40 +10,39 @@ const io = new Server(server);
 app.use(express.static("public"));
 app.use("/dice_faces", express.static(__dirname + "/public/dice_faces"));
 
-let drawHistory = []; // Store all drawn lines
-let diceHistory = []; // Store all dice
-let stampHistory = []; //Store all stamps
-let textHistory = []; //Store all texts
+let drawHistory = [];
+let diceHistory = [];
+let stampHistory = [];
+let textHistory = [];
 
 io.on("connection", (socket) => {
     console.log("A user connected");
+    // socket.emit("drawExistingCanvas", drawHistory);
+    // socket.emit("drawExistingStamps", stampHistory);
+    // socket.emit("drawExistingDice", diceHistory);
 
-    socket.emit("drawHistory", drawHistory);
-    socket.emit("dropDice", diceHistory);
-    socket.emit("dropStamp", stampHistory);
-    socket.emit("writeText", textHistory);
-
-    // Add handler for history requests (for canvas resize)
-    socket.on("requestHistory", () => {
-        socket.emit("drawHistory", drawHistory);
-        socket.emit("dropDice", diceHistory);
-        socket.emit("dropStamp", stampHistory);
-        socket.emit("writeText", textHistory);
+    socket.on("redrawAll", () => {
+        socket.emit("drawExistingCanvas", drawHistory);
+        socket.emit("drawExistingStamps", stampHistory);
+        socket.emit("drawExistingDice", diceHistory);
     });
 
-    socket.on("draw", (data) => {
-        drawHistory.push(data);
-        socket.broadcast.emit("draw", data); // Send to all users except the sender
+    socket.on("draw", (drawData) => {
+        drawData.lastX = drawData.lastX / drawData.canvasWidth;
+        drawData.lastY = drawData.lastY / drawData.canvasHeight;
+        drawData.x = drawData.x / drawData.canvasWidth;
+        drawData.y = drawData.y / drawData.canvasHeight;
+
+        drawHistory.push(drawData);
+        io.emit("draw", drawData);
     });
 
-    socket.on("erase", (data) => {
-        drawHistory.push({
-            x: data.x / data.canvasWidth,
-            y: data.y / data.canvasHeight,
-            size: data.size,
-            erase: true
-        });
-        socket.broadcast.emit("erase", data); // Send erase event to others
+    socket.on("erase", (eraseData) => {
+        eraseData.x = eraseData.x / eraseData.canvasWidth;
+        eraseData.y = eraseData.y / eraseData.canvasHeight;
+
+        drawHistory.push(eraseData);
+        io.emit("erase", eraseData);
     });
 
     socket.on("clearDice", () => {
@@ -54,25 +52,19 @@ io.on("connection", (socket) => {
     });
 
     socket.on("clearCanvas", () => {
-        diceHistory = []; // Clear dice history
+        diceHistory = [];
         drawHistory = [];
         stampHistory = [];
         textHistory = [];
-        io.emit("clearCanvas"); // Notify all users
-        io.emit("dropDice", []); // Send empty dice array to clear dice
+        io.emit("clearCanvas");
     });
 
-    // Handle dice movement
     socket.on("moveDie", (moveData) => {
-        // Find the die in our history
         const dieIndex = diceHistory.findIndex(die => die.id === moveData.id);
-        
         if (dieIndex !== -1) {
-            // Update die position
             diceHistory[dieIndex].x = moveData.x / moveData.canvasWidth;
             diceHistory[dieIndex].y = moveData.y / moveData.canvasHeight;
-            // Broadcast the update to all clients
-            io.emit("moveDie", diceHistory[dieIndex]);
+            io.emit("updateDice", diceHistory);
         }
     });
 
@@ -100,22 +92,23 @@ io.on("connection", (socket) => {
         newStamp = {
             x: data.x / data.canvasWidth,
             y: data.y / data.canvasHeight,
-            size: data.size,
             value: data.value
         };
 
         stampHistory.push(newStamp);
-        io.emit("dropStamp", stampHistory);
+        io.emit("dropStamp", newStamp);
     });
 
     socket.on("dropDice", (data) => {
         let bCount = data.bCount;
         let lCount = data.lCount;
+        let diceDroppedArray = [];
+
         const diceCount = bCount + lCount;
-        const spacing = 100;
+        const spacing = data.size *5;
         const diceSize = data.size;
-        const maxRadius = 50 * data.spread + 200;
-        const maxAttempts = 10; // Prevent infinite loops
+        const maxRadius = 30 * data.spread + data.size;
+        const maxAttempts = 10;
     
         for (let i = 0; i < diceCount; i++) {
             let newDie;
@@ -138,17 +131,49 @@ io.on("connection", (socket) => {
                     id: uuidv4(), // Generate unique ID for each die
                     x: rawX / data.canvasWidth,
                     y: rawY / data.canvasHeight,
-                    size: diceSize,
                     value: val
                 };
                 attempts++;
             } while (isOverlapping(newDie, diceHistory, spacing, data.canvasWidth, data.canvasHeight) && attempts < maxAttempts);
+            diceDroppedArray.push(newDie);
             diceHistory.push(newDie);
         }
-    
-        io.emit("dropDice", diceHistory);
+        io.emit("dropDice", diceDroppedArray);
     });
+
+    function isOverDie(mouseX, mouseY, die, canvasWidth, canvasHeight, diceSize) {
+        const dx = mouseX - (die.x * canvasWidth);
+        const dy = mouseY - (die.y * canvasHeight);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance < diceSize / 2;
+    }
+
+    socket.on("checkDieClick", (data) => {
+        let diceData = {
+            die: null,
+            x: data.x,
+            y: data.y
+        };
+        for (let i = 0; i < diceHistory.length; i++) {
+            if (isOverDie(data.x, data.y, diceHistory[i], data.canvasWidth, data.canvasHeight, data.size)) {
+                diceHistory[i].moving = true;
+                diceData.die = diceHistory[i];
+            }
+        }
+        socket.emit("dieClickResult", diceData);
+    });
+
+    socket.on("stopDragging", (data) => {
+        const dieIndex = diceHistory.findIndex(die => die.id === data.dieId);
+        if (dieIndex !== -1) {
+            diceHistory[dieIndex].moving = false;
+        }
+
+        io.emit("updateDice", diceHistory);
+    })
+
     
+
     socket.on("disconnect", () => {
         console.log("A user disconnected");
     });

@@ -83,11 +83,14 @@ h1 {
 }
 
 canvas {
-    background-color: var(--canvas-color);
     /* border: 8px solid var(--primary-color); */
     /* border-radius: 8px; */
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     width: 100%;
+}
+
+#backgroundWhiteboard {
+    background-color: var(--canvas-color);
 }
 
 footer {
@@ -262,6 +265,7 @@ footer {
     max-height: 90vh; /* Prevent it from getting too tall */
     overflow-y: auto; /* Enable scrolling if too many images */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 3;
 }
 
 #stamp-toolbar img {

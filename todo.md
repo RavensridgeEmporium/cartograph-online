@@ -1,1 +1,1 @@
-- [ ] Add link to Ravensridge in the footer
+- [ ] Make pen a dark brown
