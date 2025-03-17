@@ -20,8 +20,8 @@ const loadedDiceImages = [];
 const loadedStampImages = [];
 const drawSizeFactor = 0.0025;
 let drawSize = canvas.width * drawSizeFactor;
-const eraserSizeFactor = 0.004;
-let eraserSize = canvas.width * drawSizeFactor;
+const eraserSizeFactor = 0.01;
+let eraserSize = canvas.width * eraserSizeFactor;
 const stampSizeFactor = 0.04;
 let stampSize = canvas.width * stampSizeFactor;
 const diceSizeFactor = 0.035;
@@ -32,7 +32,7 @@ let textSize = canvas.width * textSizeFactor;
 let currentTool = 'none';
 let biomeCount = 3;
 let landmarkCount = 1;
-let diceSpread = 1;
+let diceSpread = 4;
 let drawing = false;
 let lastX = 0, lastY = 0;
 let mouseDown = false;
@@ -43,7 +43,6 @@ let textInput = null;
 let textPosition = { x: 0, y: 0};
 
 const textOptions = {
-    font: textSize + 'px Crimson Pro',
     fillStyle: '#000000'
 };
 
@@ -125,6 +124,7 @@ function resizeCanvas() {
     stampSize = canvas.width * stampSizeFactor;
     drawSize = canvas.width * drawSizeFactor;
     textSize = canvas.width * textSizeFactor;
+    eraserSize = canvas.width * eraserSizeFactor;
     socket.emit("redrawAll");
 }
 
@@ -224,8 +224,6 @@ function commitText() {
     const text = textInput.innerText || textInput.textContent;
 
     if (text.trim() !== '') {
-        // backgroundCtx.fillText(text, textPosition.x, textPosition.y + parseInt(textOptions.font, 10) * 0.75);
-
         socket.emit("commitText", {
             text: text,
             x: textPosition.x, 
@@ -251,13 +249,10 @@ function createTextInput(x, y) {
     textInput.style.left = `${(x / canvas.width) * canvas.offsetWidth}px`;
     textInput.style.top = `${(y / canvas.height) * canvas.offsetHeight - (textSize/2)}px`;
     textInput.style.minWidth = '20px';
-    // textInput.style.minHeight = '1em';
     textInput.style.padding = '0';
     textInput.style.margin = '0';
     textInput.style.background = 'transparent';
     textInput.style.border = '1px dashed #999';
-    // textInput.style.fontFamily = textOptions.font.split(' ').slice(1).join(' '); // Extract font family
-    // textInput.style.fontSize = `${textSize}px`;
     textInput.style.font = textSize + 'px Crimson Pro';
     textInput.style.color = textOptions.fillStyle;
     textInput.style.zIndex = '4';
@@ -346,10 +341,10 @@ drawModeCheckbox.addEventListener("change", () => {
         stampModeCheckbox.checked = false;
         textModeCheckbox.checked = false;
         currentTool = "pen";
-        updateStampToolbar();
     } else {
         currentTool = "none";
     }
+    updateStampToolbar();
 });
 
 eraseModeCheckbox.addEventListener("change", () => {
@@ -359,10 +354,10 @@ eraseModeCheckbox.addEventListener("change", () => {
         drawModeCheckbox.checked = false;
         textModeCheckbox.checked = false;
         currentTool = "eraser";
-        updateStampToolbar();
     } else {
         currentTool = "none";
     }
+    updateStampToolbar();
 });
 
 diceModeCheckbox.addEventListener("change", () => {
@@ -373,10 +368,10 @@ diceModeCheckbox.addEventListener("change", () => {
         textModeCheckbox.checked = false;
         currentTool = "dice";
         drawing = false;
-        updateStampToolbar();
     } else {
         currentTool = "none";
     }
+    updateStampToolbar();
 });
 
 stampModeCheckbox.addEventListener("change", () => {
@@ -556,9 +551,7 @@ socket.on("dropStamp", (stampData) => {
 
 socket.on("dropDice", (data) => {
     data.forEach((die) => {
-        if (!die.moving) {
-            drawDiceOnCanvas(ctx, die.x, die.y, diceSize, die.value);
-        }
+        drawDiceOnCanvas(ctx, die.x, die.y, diceSize, die.value);
     });
 });
 
