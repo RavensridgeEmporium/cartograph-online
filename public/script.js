@@ -524,6 +524,116 @@ canvas.addEventListener("mousemove", (event) => {
     }
 });
 
+canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+canvas.addEventListener("touchend", handleTouchEnd);
+canvas.addEventListener("touchcancel", handleTouchCancel);
+
+function handleTouchStart(event) {
+    event.preventDefault(); // Prevent scrolling when drawing
+    if (event.touches.length === 1) { // Only handle single touch
+        const touch = event.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const touchPos = {
+            x: (touch.clientX - rect.left) * (canvas.width / canvas.clientWidth),
+            y: (touch.clientY - rect.top) * (canvas.height / canvas.clientHeight)
+        };
+        
+        mouseDown = true;
+        
+        if (currentTool === "stamp") {
+            socket.emit("dropStamp", {
+                canvasWidth: canvas.width,
+                canvasHeight: canvas.height, 
+                x: touchPos.x, 
+                y: touchPos.y,
+                value: selectedStampValue
+            });
+        } else if (currentTool === "dice") {
+            socket.emit("checkDieClick", {
+                canvasWidth: canvas.width,
+                canvasHeight: canvas.height, 
+                x: touchPos.x, 
+                y: touchPos.y,
+                size: diceSize
+            });
+        } else if (currentTool === "text") {
+            if (textInput) {
+                commitText();
+            } else {
+                createTextInput(touchPos.x, touchPos.y);
+            }
+        } else if (currentTool === "pen" || currentTool === "eraser") {
+            drawing = true;
+            lastX = touchPos.x;
+            lastY = touchPos.y;
+        }
+    }
+}
+
+function handleTouchMove(event) {
+    event.preventDefault(); // Prevent scrolling when drawing
+    if (event.touches.length === 1 && mouseDown) { // Only handle single touch
+        const touch = event.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const touchPos = {
+            x: (touch.clientX - rect.left) * (canvas.width / canvas.clientWidth),
+            y: (touch.clientY - rect.top) * (canvas.height / canvas.clientHeight)
+        };
+        
+        if (drawing) {
+            if (currentTool === "eraser") {
+                socket.emit("erase", { 
+                    x: touchPos.x, 
+                    y: touchPos.y, 
+                    canvasWidth: canvas.width, 
+                    canvasHeight: canvas.height, 
+                    erase: true 
+                });
+            } else if (currentTool === "pen") {
+                socket.emit("draw", { 
+                    lastX, 
+                    lastY, 
+                    x: touchPos.x, 
+                    y: touchPos.y, 
+                    canvasWidth: canvas.width, 
+                    canvasHeight: canvas.height 
+                });
+            }
+            lastX = touchPos.x;
+            lastY = touchPos.y;
+        } else if (draggingDie && dieBeingDragged) {
+            socket.emit("moveDie", {
+                id: dieBeingDragged.id,
+                canvasWidth: canvas.width,
+                canvasHeight: canvas.height, 
+                x: touchPos.x, 
+                y: touchPos.y,
+            });
+        }
+    }
+}
+
+function handleTouchEnd() {
+    if (currentTool === "pen") {
+        drawing = false;
+    } else if (draggingDie && dieBeingDragged) {
+        draggingDie = false;
+        dieBeingDragged = { id: null };
+    }
+    mouseDown = false;
+}
+
+function handleTouchCancel() {
+    if (currentTool === "pen") {
+        drawing = false;
+    } else if (draggingDie && dieBeingDragged) {
+        draggingDie = false;
+        dieBeingDragged = { id: null };
+    }
+    mouseDown = false;
+}
+
 socket.on("dieClickResult", (diceData) => {
     if (diceData.die) {
         draggingDie = true;
