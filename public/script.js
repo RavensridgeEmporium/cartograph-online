@@ -12,22 +12,27 @@ const ctx = canvas.getContext("2d");
 const backgroundCanvas = document.getElementById('backgroundWhiteboard');
 const backgroundCtx = backgroundCanvas.getContext('2d');
 const canvasContainer = document.getElementById("canvas-container");
+const helpButton = document.getElementById('helpButton');
+const helpModal = document.getElementById('helpModal');
+const closeModal = document.getElementById('closeModal');
 
 const socket = io();
 
-const TEXT_CALIBRATION_FACTOR = 0.65;
 const loadedDiceImages = [];
 const loadedStampImages = [];
 const drawSizeFactor = 0.0025;
-let drawSize = canvas.width * drawSizeFactor;
 const eraserSizeFactor = 0.01;
-let eraserSize = canvas.width * eraserSizeFactor;
 const stampSizeFactor = 0.04;
-let stampSize = canvas.width * stampSizeFactor;
 const diceSizeFactor = 0.035;
-let diceSize = canvas.width * diceSizeFactor;
 const textSizeFactor = 0.018;
+
+let drawSize = canvas.width * drawSizeFactor;
+let eraserSize = canvas.width * eraserSizeFactor;
+let stampSize = canvas.width * stampSizeFactor;
+let diceSize = canvas.width * diceSizeFactor;
 let textSize = canvas.width * textSizeFactor;
+
+const lineColour = "#000000";
 
 let currentTool = 'none';
 let biomeCount = 3;
@@ -43,7 +48,7 @@ let textInput = null;
 let textPosition = { x: 0, y: 0};
 
 const textOptions = {
-    fillStyle: '#000000'
+    fillStyle: '#3E1E0C'
 };
 
 const diceImages = [
@@ -149,7 +154,7 @@ function redrawStrokes(dataArray) {
         if (data.erase) {
             eraseOnCanvas(backgroundCtx, data.x, data.y, eraserSize);
         } else {
-            drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, "black", drawSize);
+            drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize);
         }
     });
 }
@@ -214,7 +219,7 @@ function drawDiceOnCanvas(context, x, y, size, value) {
 
 function drawTextOnCanvas(context, x, y, text) {
     context.font = textSize + 'px Crimson Pro';
-    context.fillStyle = textOptions.fillStyle;
+    context.fillStyle = lineColour;
     context.fillText(text, x * canvas.width, (y * canvas.height));
 }
 
@@ -254,7 +259,7 @@ function createTextInput(x, y) {
     textInput.style.background = 'transparent';
     textInput.style.border = '1px dashed #999';
     textInput.style.font = textSize + 'px Crimson Pro';
-    textInput.style.color = textOptions.fillStyle;
+    textInput.style.color = lineColour;
     textInput.style.zIndex = '4';
 
     canvasContainer.appendChild(textInput);
@@ -538,7 +543,7 @@ socket.on("dieClickResult", (diceData) => {
 });
 
 socket.on("draw", (data) => {   
-    drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, "black", drawSize);
+    drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize);
 });
 
 socket.on("erase", (data) => {
@@ -587,4 +592,24 @@ socket.on("drawExistingDice", (data) => {
 
 socket.on("drawExistingText", (data) => {
     redrawText(data);
+});
+
+helpButton.addEventListener('click', function() {
+    helpModal.style.display = 'block';
+});
+
+closeModal.addEventListener('click', function() {
+    helpModal.style.display = 'none';
+});
+
+window.addEventListener('click', function(event) {
+    if (event.target === helpModal) {
+        helpModal.style.display = 'none';
+    }
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && helpModal.style.display === 'block') {
+        helpModal.style.display = 'none';
+    }
 });
