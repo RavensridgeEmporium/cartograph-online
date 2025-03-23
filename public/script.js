@@ -35,8 +35,6 @@ let textSize = canvas.width * textSizeFactor;
 const lineColour = "#000000";
 
 let currentTool = 'none';
-let biomeCount = 3;
-let landmarkCount = 1;
 let diceSpread = 4;
 let drawing = false;
 let lastX = 0, lastY = 0;
@@ -45,11 +43,7 @@ let selectedStampValue = 1;
 let draggingDie = false;
 let dieBeingDragged = { id: null };
 let textInput = null;
-let textPosition = { x: 0, y: 0};
-
-const textOptions = {
-    fillStyle: '#3E1E0C'
-};
+let textPosition = { x: 0, y: 0 };
 
 const diceImages = [
     "/dice_faces/face1.png",
@@ -78,24 +72,21 @@ const stampImages = [
     "/assets/ruin.png"
 ];
 
+//do the same for landmark
 function biomeInc() {
-    biomeCount++;
-    updateTextElement(bcount, biomeCount);
+    socket.emit("biomeCountChange", true);
 }
 
 function biomeDec() {
-    biomeCount = biomeCount > 0 ? biomeCount - 1 : 0;
-    updateTextElement(bcount, biomeCount);
+    socket.emit("biomeCountChange", false);
 }
 
 function landmarkInc() {
-    landmarkCount++;
-    updateTextElement(lcount, landmarkCount);
+    socket.emit("landmarkCountChange", true);
 }
 
 function landmarkDec() {
-    landmarkCount = landmarkCount > 0 ? landmarkCount - 1 : 0;
-    updateTextElement(lcount, landmarkCount);
+    socket.emit("landmarkCountChange", false);
 }
 
 function diceSpreadInc() {
@@ -640,8 +631,6 @@ socket.on("dieClickResult", (diceData) => {
         dieBeingDragged = diceData.die;
     } else {
         socket.emit("dropDice", {
-            bCount: biomeCount,
-            lCount: landmarkCount,
             canvasWidth: canvas.width,
             canvasHeight: canvas.height, 
             x: diceData.x, 
@@ -686,6 +675,14 @@ socket.on("clearCanvas", () => {
 
 socket.on("clearDice", () => {
     ctx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+});
+
+socket.on("updateBiomeCount", (biomeCount) => {
+    updateTextElement(bcount, biomeCount);
+});
+
+socket.on("updateLandmarkCount", (landmarkCount) => {
+    updateTextElement(lcount, landmarkCount);
 });
 
 socket.on("drawExistingCanvas", (data) => {

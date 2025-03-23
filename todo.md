@@ -1,2 +1,1 @@
 - [ ] Add button for increase / decrease font size that when changed calls a redraw of text
-- [ ] Touch controls for drawing? stamps and dice already work

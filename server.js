@@ -28,6 +28,8 @@ app.get('/:roomId([a-zA-Z0-9]{6})', (req, res) => {
             diceHistory: [],
             stampHistory: [],
             textHistory: [],
+            biomeCount: 3,
+            landmarkCount: 1,
             lastActivity: Date.now()
         };
         console.log(`Created new room: ${roomId}`);
@@ -65,6 +67,8 @@ io.on("connection", (socket) => {
                 diceHistory: [],
                 stampHistory: [],
                 textHistory: [],
+                biomeCount: 3,
+                landmarkCount: 1,
                 lastActivity: Date.now()
             };
         }
@@ -129,6 +133,28 @@ io.on("connection", (socket) => {
         io.to(currentRoom).emit("clearCanvas");
     });
 
+    socket.on("biomeCountChange", (increase) => {
+        if (!currentRoom || !rooms[currentRoom]) return;
+
+        if (increase) {
+            rooms[currentRoom].biomeCount = rooms[currentRoom].biomeCount + 1;
+        } else {
+            rooms[currentRoom].biomeCount = rooms[currentRoom].biomeCount > 0 ? rooms[currentRoom].biomeCount -1 : 0;
+        }
+        io.to(currentRoom).emit("updateBiomeCount", rooms[currentRoom].biomeCount)
+    });
+
+    socket.on("landmarkCountChange", (increase) => {
+        if (!currentRoom || !rooms[currentRoom]) return;
+
+        if (increase) {
+            rooms[currentRoom].landmarkCount = rooms[currentRoom].landmarkCount + 1;
+        } else {
+            rooms[currentRoom].landmarkCount = rooms[currentRoom].landmarkCount > 0 ? rooms[currentRoom].landmarkCount -1 : 0;
+        }
+        io.to(currentRoom).emit("updateLandmarkCount", rooms[currentRoom].landmarkCount)
+    });
+
     socket.on("moveDie", (moveData) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
@@ -185,8 +211,8 @@ io.on("connection", (socket) => {
         
         rooms[currentRoom].lastActivity = Date.now();
         
-        let bCount = data.bCount;
-        let lCount = data.lCount;
+        let bCount = rooms[currentRoom].biomeCount;
+        let lCount = rooms[currentRoom].landmarkCount;
         let diceDroppedArray = [];
 
         const diceCount = bCount + lCount;
