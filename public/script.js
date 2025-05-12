@@ -7,14 +7,16 @@ const diceModeCheckbox = document.getElementById("toggleDiceDrop");
 const stampModeCheckbox = document.getElementById("toggleStampMode");
 const textModeCheckbox = document.getElementById("toggleTextMode");
 const stampToolbar = document.getElementById("stamp-toolbar");
-const canvas = document.getElementById("whiteboard");
-const ctx = canvas.getContext("2d");
-const backgroundCanvas = document.getElementById('backgroundWhiteboard');
-const backgroundCtx = backgroundCanvas.getContext('2d');
+const diceCanvas = document.getElementById("whiteboard");
+const diceCanvasCtx = diceCanvas.getContext("2d");
+const backgroundCanvas = document.getElementById("backgroundWhiteboard");
+const backgroundCtx = backgroundCanvas.getContext("2d");
+const textCanvas = document.getElementById("textWhiteboard");
+const textCanvasCtx = textCanvas.getContext("2d");
 const canvasContainer = document.getElementById("canvas-container");
-const helpButton = document.getElementById('helpButton');
-const helpModal = document.getElementById('helpModal');
-const closeModal = document.getElementById('closeModal');
+const helpButton = document.getElementById("helpButton");
+const helpModal = document.getElementById("helpModal");
+const closeModal = document.getElementById("closeModal");
 
 const socket = io();
 
@@ -26,11 +28,11 @@ const stampSizeFactor = 0.04;
 const diceSizeFactor = 0.035;
 const textSizeFactor = 0.018;
 
-let drawSize = canvas.width * drawSizeFactor;
-let eraserSize = canvas.width * eraserSizeFactor;
-let stampSize = canvas.width * stampSizeFactor;
-let diceSize = canvas.width * diceSizeFactor;
-let textSize = canvas.width * textSizeFactor;
+let drawSize = diceCanvas.width * drawSizeFactor;
+let eraserSize = diceCanvas.width * eraserSizeFactor;
+let stampSize = diceCanvas.width * stampSizeFactor;
+let diceSize = diceCanvas.width * diceSizeFactor;
+let textSize = diceCanvas.width * textSizeFactor;
 
 const lineColour = "#000000";
 
@@ -44,6 +46,8 @@ let draggingDie = false;
 let dieBeingDragged = { id: null };
 let textInput = null;
 let textPosition = { x: 0, y: 0 };
+let draggingText = false;
+let textBeingDragged = { id: null };
 
 const diceImages = [
     "/dice_faces/face1.png",
@@ -72,57 +76,60 @@ const stampImages = [
     "/assets/ruin.png"
 ];
 
-//do the same for landmark
 function biomeInc() {
     socket.emit("biomeCountChange", true);
-}
+};
 
 function biomeDec() {
     socket.emit("biomeCountChange", false);
-}
+};
 
 function landmarkInc() {
     socket.emit("landmarkCountChange", true);
-}
+};
 
 function landmarkDec() {
     socket.emit("landmarkCountChange", false);
-}
+};
 
 function diceSpreadInc() {
     diceSpread++;
     updateTextElement(diceSpreadRange, diceSpread);
-}
+};
 
 function diceSpreadDec() {
     diceSpread = diceSpread > 0 ? diceSpread - 1 : 0;
     updateTextElement(diceSpreadRange, diceSpread);
-}
+};
 
 function updateTextElement(element, text) {
     element.textContent = text;
-}
+};
 
 function resizeCanvas() {
     if(window.innerHeight >= (9*window.innerWidth/16)) {
-        canvas.width  = window.innerWidth;
-        canvas.height = Math.floor(9*canvas.width/16);
+        diceCanvas.width  = window.innerWidth;
+        diceCanvas.height = Math.floor(9*diceCanvas.width/16);
+        textCanvas.width  = window.innerWidth;
+        textCanvas.height = Math.floor(9*diceCanvas.width/16);
         backgroundCanvas.width  = window.innerWidth;
-        backgroundCanvas.height = Math.floor(9*canvas.width/16);
+        backgroundCanvas.height = Math.floor(9*diceCanvas.width/16);
     }
     else {
-        canvas.height = window.innerHeight;
-        canvas.width  = Math.floor(16*canvas.height/9);
+        diceCanvas.height = window.innerHeight;
+        diceCanvas.width  = Math.floor(16*diceCanvas.height/9);
+        textCanvas.width  = window.innerWidth;
+        textCanvas.height = Math.floor(16*diceCanvas.width/9);
         backgroundCanvas.height = window.innerHeight;
-        backgroundCanvas.width  = Math.floor(16*canvas.height/9);
+        backgroundCanvas.width  = Math.floor(16*diceCanvas.height/9);
     }
-    diceSize = canvas.width * diceSizeFactor;
-    stampSize = canvas.width * stampSizeFactor;
-    drawSize = canvas.width * drawSizeFactor;
-    textSize = canvas.width * textSizeFactor;
-    eraserSize = canvas.width * eraserSizeFactor;
+    diceSize = diceCanvas.width * diceSizeFactor;
+    stampSize = diceCanvas.width * stampSizeFactor;
+    drawSize = diceCanvas.width * drawSizeFactor;
+    textSize = diceCanvas.width * textSizeFactor;
+    eraserSize = diceCanvas.width * eraserSizeFactor;
     socket.emit("redrawAll");
-}
+};
 
 function preloadDiceImages() {
     for (let i = 0; i < diceImages.length; i++) {
@@ -130,7 +137,7 @@ function preloadDiceImages() {
         img.src = diceImages[i];
         loadedDiceImages.push(img);
     }
-}
+};
 
 function preloadStampImages() {
     for (let i = 0; i < stampImages.length; i++) {
@@ -138,7 +145,7 @@ function preloadStampImages() {
         img.src = stampImages[i];
         loadedStampImages.push(img);
     }
-}
+};
 
 function redrawStrokes(dataArray) {
     dataArray.forEach((data) => {
@@ -148,71 +155,71 @@ function redrawStrokes(dataArray) {
             drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize);
         }
     });
-}
+};
 
 function redawStamps(dataArray) {
     dataArray.forEach((data) => {
         drawStampOnCanvas(backgroundCtx, data.x, data.y, stampSize, data.value);
     });
-}
+};
 
 function redrawDice(dataArray) {
     dataArray.forEach((data) => {
-        drawDiceOnCanvas(ctx, data.x, data.y, diceSize, data.value);
+        drawDiceOnCanvas(diceCanvasCtx, data.x, data.y, diceSize, data.value);
     });
-}
+};
 
 function redrawText(dataArray) {
     dataArray.forEach((data) => {
-        drawTextOnCanvas(backgroundCtx, data.x, data.y, data.text);
+        drawTextOnCanvas(textCanvasCtx, data.x, data.y, data.text);
     });
-}
+};
 
 function drawLineOnCanvas(context, x1, y1, x2, y2, color, size) {
     context.lineWidth = size;
     context.lineCap = "round";
     context.strokeStyle = color;
     context.beginPath();
-    context.moveTo(x1 * canvas.width, y1 * canvas.height);
-    context.lineTo(x2 * canvas.width, y2 * canvas.height);
+    context.moveTo(x1 * diceCanvas.width, y1 * diceCanvas.height);
+    context.lineTo(x2 * diceCanvas.width, y2 * diceCanvas.height);
     context.stroke();
-}
+};
 
 function eraseOnCanvas(context, x, y, size) {
-    context.clearRect((x * canvas.width) - size / 2, (y * canvas.height) - size / 2, size, size);
-}
+    context.clearRect((x * diceCanvas.width) - size / 2, (y * diceCanvas.height) - size / 2, size, size);
+};
 
 function drawStampOnCanvas(context, x, y, size, stampValue) {
     const stampIndex = stampValue - 1;
     if (stampIndex >= 0) {
         context.drawImage(
             loadedStampImages[stampIndex], 
-            (x * canvas.width) - size / 2, 
-            (y * canvas.height) - size / 2, 
+            (x * diceCanvas.width) - size / 2, 
+            (y * diceCanvas.height) - size / 2, 
             size, 
             size
         );
     }
-}
+};
 
 function drawDiceOnCanvas(context, x, y, size, value) {
     const diceIndex = value - 1;
     if (diceIndex >= 0) {
         context.drawImage(
             loadedDiceImages[diceIndex], 
-            (x * canvas.width) - size / 2, 
-            (y * canvas.height) - size / 2, 
+            (x * diceCanvas.width) - size / 2, 
+            (y * diceCanvas.height) - size / 2, 
             size, 
             size
         );
     }
-}
+};
 
 function drawTextOnCanvas(context, x, y, text) {
     context.font = textSize + 'px Crimson Pro';
     context.fillStyle = lineColour;
-    context.fillText(text, x * canvas.width, (y * canvas.height));
-}
+    context.fillText(text, x * diceCanvas.width, (y * diceCanvas.height));
+};
 
 function commitText() {
     if (!textInput) return;
@@ -224,13 +231,13 @@ function commitText() {
             text: text,
             x: textPosition.x, 
             y: textPosition.y + (textSize*0.51),
-            canvasWidth: canvas.width,
-            canvasHeight: canvas.height
+            canvasWidth: diceCanvas.width,
+            canvasHeight: diceCanvas.height
         });
     }
     canvasContainer.removeChild(textInput);
     textInput = null;
-}
+};
 
 function createTextInput(x, y) {
     if (textInput) {
@@ -242,8 +249,8 @@ function createTextInput(x, y) {
     textInput.contentEditable = true;
     textInput.style.position = 'absolute';
     textInput.style.textAlign = 'center';
-    textInput.style.left = `${(x / canvas.width) * canvas.offsetWidth}px`;
-    textInput.style.top = `${(y / canvas.height) * canvas.offsetHeight - (textSize/2)}px`;
+    textInput.style.left = `${(x / diceCanvas.width) * diceCanvas.offsetWidth}px`;
+    textInput.style.top = `${(y / diceCanvas.height) * diceCanvas.offsetHeight - (textSize/2)}px`;
     textInput.style.minWidth = '20px';
     textInput.style.padding = '0';
     textInput.style.margin = '0';
@@ -269,22 +276,22 @@ function createTextInput(x, y) {
             textInput = null;
         }
     });
-}
+};
 
-function getMousePos(canvas, evt) {
-    const rect = canvas.getBoundingClientRect();
+function getMousePos(diceCanvas, evt) {
+    const rect = diceCanvas.getBoundingClientRect();
     return {
-        x: (evt.clientX - rect.left) * (canvas.width / canvas.clientWidth),
-        y: (evt.clientY - rect.top) * (canvas.height / canvas.clientHeight)
+        x: (evt.clientX - rect.left) * (diceCanvas.width / diceCanvas.clientWidth),
+        y: (evt.clientY - rect.top) * (diceCanvas.height / diceCanvas.clientHeight)
     };
-}
+};
 
 function highlightSelectedStamp() {
     const images = document.querySelectorAll("#stamp-toolbar img");
     images.forEach(img => {
         img.classList.toggle("selected", parseInt(img.dataset.index) === selectedStampValue);
     });
-}
+};
 
 function updateStampToolbar() {
     if (currentTool === "stamp") {
@@ -309,7 +316,7 @@ function updateStampToolbar() {
     } else {
         stampToolbar.classList.remove("show");
     }
-}
+};
 
 function toggleAllButtonsOff() {
     diceModeCheckbox.checked = false;
@@ -317,7 +324,43 @@ function toggleAllButtonsOff() {
     stampModeCheckbox.checked = false;
     drawModeCheckbox.checked = false;
     textModeCheckbox.checked = false;
-}
+};
+
+function clearToolActions() {
+    drawing = false;
+    draggingDie = false;
+    dieBeingDragged = { id: null };
+    draggingText = false;
+    textBeingDragged = { id: null };
+    mouseDown = false;
+};
+
+function checkForDieUnderMouse(x, y, callback) {
+    socket.emit("checkDieClick", {
+        canvasWidth: diceCanvas.width,
+        canvasHeight: diceCanvas.height, 
+        x: x, 
+        y: y,
+        size: diceSize
+    });
+    
+    socket.once("dieClickResult", (diceData) => {
+        callback(diceData);
+    });
+};
+
+function checkForTextUnderMouse(x, y, callback) {
+    socket.emit("checkTextClick", {
+        canvasWidth: diceCanvas.width,
+        canvasHeight: diceCanvas.height, 
+        x: x, 
+        y: y
+    });
+    
+    socket.once("textClickResult", (textData) => {
+        callback(textData);
+    });
+};
 
 function initialise() {
     resizeCanvas();
@@ -410,24 +453,18 @@ document.getElementById("downloadCanvas").addEventListener("click", () => {
     const tempCanvas = document.createElement("canvas");
     const tempCtx = tempCanvas.getContext("2d");
 
-    // Set canvas size to match the original
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
+    tempCanvas.width = diceCanvas.width;
+    tempCanvas.height = diceCanvas.height;
 
-    // Draw a solid white background
     tempCtx.fillStyle = "white";
     tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
-    // Draw the background canvas (preserves drawings)
     tempCtx.drawImage(backgroundCanvas, 0, 0);
+    tempCtx.drawImage(textCanvas, 0, 0);
+    tempCtx.drawImage(diceCanvas, 0, 0);
 
-    // Draw the main canvas layer (active drawings & dice)
-    tempCtx.drawImage(canvas, 0, 0);
-
-    // Convert canvas to an image
     const image = tempCanvas.toDataURL("image/png");
 
-    // Create a download link
     const link = document.createElement("a");
     link.href = image;
     link.download = "cartograph_map.png";
@@ -439,137 +476,173 @@ window.addEventListener("resize", () => {
 });
 
 //User Inputs
-canvas.addEventListener("mousedown", (event) => {
-    const mousePos = getMousePos(canvas, event);
+diceCanvas.addEventListener("mousedown", (event) => {
+    const mousePos = getMousePos(diceCanvas, event);
     mouseDown = true;
-    if (currentTool === "stamp") {
-        socket.emit("dropStamp", {
-            canvasWidth: canvas.width,
-            canvasHeight: canvas.height, 
-            x: mousePos.x, 
-            y: mousePos.y,
-            value: selectedStampValue
-        });
-    } else if (currentTool === "dice") {
-        socket.emit("checkDieClick", {
-            canvasWidth: canvas.width,
-            canvasHeight: canvas.height, 
-            x: mousePos.x, 
-            y: mousePos.y,
-            size: diceSize
-        });
-    } else if (currentTool == "text") {
-        if (textInput) {
-            commitText();
+    
+    checkForDieUnderMouse(mousePos.x, mousePos.y, (diceData) => {
+        if (diceData.die) {
+            draggingDie = true;
+            dieBeingDragged = diceData.die;
+            
+            drawing = false;
         } else {
-            createTextInput(mousePos.x, mousePos.y);
-        }  
-    } else if (currentTool === "pen" || currentTool === "eraser") {
-        drawing = true;
-        lastX = mousePos.x;
-        lastY = mousePos.y;
-    } 
+            if (currentTool === "stamp") {
+                socket.emit("dropStamp", {
+                    canvasWidth: diceCanvas.width,
+                    canvasHeight: diceCanvas.height, 
+                    x: mousePos.x, 
+                    y: mousePos.y,
+                    value: selectedStampValue
+                });
+            } else if (currentTool === "dice") {
+                socket.emit("dropDice", {
+                    canvasWidth: diceCanvas.width,
+                    canvasHeight: diceCanvas.height, 
+                    x: mousePos.x, 
+                    y: mousePos.y,
+                    spread: diceSpread,
+                    size: diceSize
+                });
+            } else if (currentTool == "text") {
+                if (textInput) {
+                    commitText();
+                } else {
+                    createTextInput(mousePos.x, mousePos.y);
+                }  
+            } else if (currentTool === "pen" || currentTool === "eraser") {
+                drawing = true;
+                lastX = mousePos.x;
+                lastY = mousePos.y;
+            }
+        }
+    });
 });
 
-canvas.addEventListener("mouseup", () => {
-    if (currentTool === "pen") {
-        drawing = false;
-    } else if (draggingDie && dieBeingDragged) {
-        draggingDie = false;
-        dieBeingDragged = { id: null };
-    }
-    mouseDown = false;
+diceCanvas.addEventListener("mouseup", () => {
+    clearToolActions();
 });
 
-canvas.addEventListener("mouseleave", () => {
-    if (currentTool === "pen") {
-        drawing = false;
-    } else if (draggingDie && dieBeingDragged) {
-        draggingDie = false;
-        dieBeingDragged = { id: null };
-    }
-    mouseDown = false;
+diceCanvas.addEventListener("mouseleave", () => {
+    clearToolActions();
 });
 
-canvas.addEventListener("mousemove", (event) => {
-    const mousePos = getMousePos(canvas, event);
+diceCanvas.addEventListener("mousemove", (event) => {
+    const mousePos = getMousePos(diceCanvas, event);
     const x = mousePos.x;
     const y = mousePos.y;
     
     if (drawing) {
         if (currentTool === "eraser" && mouseDown) {
-            socket.emit("erase", { x, y, canvasWidth: canvas.width, canvasHeight: canvas.height, erase: true });
+            socket.emit("erase", { x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, erase: true });
         } else if (currentTool === "pen" && mouseDown) {
-            socket.emit("draw", { lastX, lastY, x, y, canvasWidth: canvas.width, canvasHeight: canvas.height });
+            socket.emit("draw", { lastX, lastY, x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height });
         }
         lastX = x;
         lastY = y;
     } else if (draggingDie && dieBeingDragged) {
         socket.emit("moveDie", {
             id: dieBeingDragged.id,
-            canvasWidth: canvas.width,
-            canvasHeight: canvas.height, 
+            canvasWidth: diceCanvas.width,
+            canvasHeight: diceCanvas.height, 
+            x: mousePos.x, 
+            y: mousePos.y,
+        });
+    } else if (draggingText && textBeingDragged) {
+        socket.emit("moveText", {
+            id: textBeingDragged.id,
+            canvasWidth: diceCanvas.width,
+            canvasHeight: diceCanvas.height, 
             x: mousePos.x, 
             y: mousePos.y,
         });
     }
 });
 
-canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
-canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
-canvas.addEventListener("touchend", handleTouchEnd);
-canvas.addEventListener("touchcancel", handleTouchCancel);
+diceCanvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+diceCanvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+diceCanvas.addEventListener("touchend", handleTouchEnd);
+diceCanvas.addEventListener("touchcancel", handleTouchCancel);
+
+helpButton.addEventListener('click', function() {
+    helpModal.style.display = 'block';
+});
+
+closeModal.addEventListener('click', function() {
+    helpModal.style.display = 'none';
+});
+
+window.addEventListener('click', function(event) {
+    if (event.target === helpModal) {
+        helpModal.style.display = 'none';
+    }
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && helpModal.style.display === 'block') {
+        helpModal.style.display = 'none';
+    }
+});
 
 function handleTouchStart(event) {
-    event.preventDefault(); // Prevent scrolling when drawing
-    if (event.touches.length === 1) { // Only handle single touch
+    event.preventDefault();
+    if (event.touches.length === 1) {
         const touch = event.touches[0];
-        const rect = canvas.getBoundingClientRect();
+        const rect = diceCanvas.getBoundingClientRect();
         const touchPos = {
-            x: (touch.clientX - rect.left) * (canvas.width / canvas.clientWidth),
-            y: (touch.clientY - rect.top) * (canvas.height / canvas.clientHeight)
+            x: (touch.clientX - rect.left) * (diceCanvas.width / diceCanvas.clientWidth),
+            y: (touch.clientY - rect.top) * (diceCanvas.height / diceCanvas.clientHeight)
         };
         
         mouseDown = true;
         
-        if (currentTool === "stamp") {
-            socket.emit("dropStamp", {
-                canvasWidth: canvas.width,
-                canvasHeight: canvas.height, 
-                x: touchPos.x, 
-                y: touchPos.y,
-                value: selectedStampValue
-            });
-        } else if (currentTool === "dice") {
-            socket.emit("checkDieClick", {
-                canvasWidth: canvas.width,
-                canvasHeight: canvas.height, 
-                x: touchPos.x, 
-                y: touchPos.y,
-                size: diceSize
-            });
-        } else if (currentTool === "text") {
-            if (textInput) {
-                commitText();
+        checkForDieUnderMouse(touchPos.x, touchPos.y, (diceData) => {
+            if (diceData.die) {
+                draggingDie = true;
+                dieBeingDragged = diceData.die;
+                drawing = false;
             } else {
-                createTextInput(touchPos.x, touchPos.y);
+                if (currentTool === "stamp") {
+                    socket.emit("dropStamp", {
+                        canvasWidth: diceCanvas.width,
+                        canvasHeight: diceCanvas.height, 
+                        x: touchPos.x, 
+                        y: touchPos.y,
+                        value: selectedStampValue
+                    });
+                } else if (currentTool === "dice") {
+                    socket.emit("dropDice", {
+                        canvasWidth: diceCanvas.width,
+                        canvasHeight: diceCanvas.height, 
+                        x: touchPos.x, 
+                        y: touchPos.y,
+                        spread: diceSpread,
+                        size: diceSize
+                    });
+                } else if (currentTool === "text") {
+                    if (textInput) {
+                        commitText();
+                    } else {
+                        createTextInput(touchPos.x, touchPos.y);
+                    }
+                } else if (currentTool === "pen" || currentTool === "eraser") {
+                    drawing = true;
+                    lastX = touchPos.x;
+                    lastY = touchPos.y;
+                }
             }
-        } else if (currentTool === "pen" || currentTool === "eraser") {
-            drawing = true;
-            lastX = touchPos.x;
-            lastY = touchPos.y;
-        }
+        });
     }
 }
 
 function handleTouchMove(event) {
-    event.preventDefault(); // Prevent scrolling when drawing
-    if (event.touches.length === 1 && mouseDown) { // Only handle single touch
+    event.preventDefault();
+    if (event.touches.length === 1 && mouseDown) {
         const touch = event.touches[0];
-        const rect = canvas.getBoundingClientRect();
+        const rect = diceCanvas.getBoundingClientRect();
         const touchPos = {
-            x: (touch.clientX - rect.left) * (canvas.width / canvas.clientWidth),
-            y: (touch.clientY - rect.top) * (canvas.height / canvas.clientHeight)
+            x: (touch.clientX - rect.left) * (diceCanvas.width / diceCanvas.clientWidth),
+            y: (touch.clientY - rect.top) * (diceCanvas.height / diceCanvas.clientHeight)
         };
         
         if (drawing) {
@@ -577,8 +650,8 @@ function handleTouchMove(event) {
                 socket.emit("erase", { 
                     x: touchPos.x, 
                     y: touchPos.y, 
-                    canvasWidth: canvas.width, 
-                    canvasHeight: canvas.height, 
+                    canvasWidth: diceCanvas.width, 
+                    canvasHeight: diceCanvas.height, 
                     erase: true 
                 });
             } else if (currentTool === "pen") {
@@ -587,8 +660,8 @@ function handleTouchMove(event) {
                     lastY, 
                     x: touchPos.x, 
                     y: touchPos.y, 
-                    canvasWidth: canvas.width, 
-                    canvasHeight: canvas.height 
+                    canvasWidth: diceCanvas.width, 
+                    canvasHeight: diceCanvas.height 
                 });
             }
             lastX = touchPos.x;
@@ -596,8 +669,16 @@ function handleTouchMove(event) {
         } else if (draggingDie && dieBeingDragged) {
             socket.emit("moveDie", {
                 id: dieBeingDragged.id,
-                canvasWidth: canvas.width,
-                canvasHeight: canvas.height, 
+                canvasWidth: diceCanvas.width,
+                canvasHeight: diceCanvas.height, 
+                x: touchPos.x, 
+                y: touchPos.y,
+            });
+        } else if (draggingText && textBeingDragged) {
+            socket.emit("moveText", {
+                id: textBeingDragged.id,
+                canvasWidth: diceCanvas.width,
+                canvasHeight: diceCanvas.height, 
                 x: touchPos.x, 
                 y: touchPos.y,
             });
@@ -606,14 +687,8 @@ function handleTouchMove(event) {
 }
 
 function handleTouchEnd() {
-    if (currentTool === "pen") {
-        drawing = false;
-    } else if (draggingDie && dieBeingDragged) {
-        draggingDie = false;
-        dieBeingDragged = { id: null };
-    }
-    mouseDown = false;
-}
+    clearToolActions();
+};
 
 function handleTouchCancel() {
     if (currentTool === "pen") {
@@ -623,7 +698,7 @@ function handleTouchCancel() {
         dieBeingDragged = { id: null };
     }
     mouseDown = false;
-}
+};
 
 socket.on("dieClickResult", (diceData) => {
     if (diceData.die) {
@@ -631,8 +706,8 @@ socket.on("dieClickResult", (diceData) => {
         dieBeingDragged = diceData.die;
     } else {
         socket.emit("dropDice", {
-            canvasWidth: canvas.width,
-            canvasHeight: canvas.height, 
+            canvasWidth: diceCanvas.width,
+            canvasHeight: diceCanvas.height, 
             x: diceData.x, 
             y: diceData.y,
             spread: diceSpread,
@@ -640,6 +715,16 @@ socket.on("dieClickResult", (diceData) => {
         });
     }
 });
+
+socket.on("textClickResult", (textData) => {
+    if (textData.text) {
+        draggingText = true;
+        textBeingDragged = textData.text;
+    }
+});
+
+socket.off("textClickResult");
+socket.off("dieClickResult");
 
 socket.on("draw", (data) => {   
     drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize);
@@ -655,26 +740,27 @@ socket.on("dropStamp", (stampData) => {
 
 socket.on("dropDice", (data) => {
     data.forEach((die) => {
-        drawDiceOnCanvas(ctx, die.x, die.y, diceSize, die.value);
+        drawDiceOnCanvas(diceCanvasCtx, die.x, die.y, diceSize, die.value);
     });
 });
 
 socket.on("updateDice", (data) => {
-    ctx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+    diceCanvasCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
     redrawDice(data);
 });
 
 socket.on("writeText", (data) => {
-    drawTextOnCanvas(backgroundCtx, data.x, data.y, data.text);
+    drawTextOnCanvas(textCanvasCtx, data.x, data.y, data.text);
 });
 
 socket.on("clearCanvas", () => {
     backgroundCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
-    ctx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+    textCanvasCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+    diceCanvasCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
 });
 
 socket.on("clearDice", () => {
-    ctx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+    diceCanvasCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
 });
 
 socket.on("updateBiomeCount", (biomeCount) => {
@@ -699,24 +785,4 @@ socket.on("drawExistingDice", (data) => {
 
 socket.on("drawExistingText", (data) => {
     redrawText(data);
-});
-
-helpButton.addEventListener('click', function() {
-    helpModal.style.display = 'block';
-});
-
-closeModal.addEventListener('click', function() {
-    helpModal.style.display = 'none';
-});
-
-window.addEventListener('click', function(event) {
-    if (event.target === helpModal) {
-        helpModal.style.display = 'none';
-    }
-});
-
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape' && helpModal.style.display === 'block') {
-        helpModal.style.display = 'none';
-    }
 });
