@@ -1,1 +1,4 @@
-- [ ] Add button for increase / decrease font size that when changed calls a redraw of text
+- [ ] Allow text to be dragged on mouse click
+- [ ] Undo functionality
+- [ ] Draw tool option to draw a dashed line rather than a solid line
+- [ ] Scrollable map with a grab tool
