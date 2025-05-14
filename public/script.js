@@ -48,6 +48,7 @@ let textInput = null;
 let textPosition = { x: 0, y: 0 };
 let draggingText = false;
 let textBeingDragged = { id: null };
+let debugText = null;
 
 const diceImages = [
     "/dice_faces/face1.png",
@@ -107,22 +108,21 @@ function updateTextElement(element, text) {
 };
 
 function resizeCanvas() {
-    if(window.innerHeight >= (9*window.innerWidth/16)) {
+    const tempWidth = Math.floor(window.innerWidth * 9 / 16);
+    if(window.innerHeight >= tempWidth) {
         diceCanvas.width  = window.innerWidth;
-        diceCanvas.height = Math.floor(9*diceCanvas.width/16);
-        textCanvas.width  = window.innerWidth;
-        textCanvas.height = Math.floor(9*diceCanvas.width/16);
-        backgroundCanvas.width  = window.innerWidth;
-        backgroundCanvas.height = Math.floor(9*diceCanvas.width/16);
+        diceCanvas.height = tempWidth;
     }
     else {
         diceCanvas.height = window.innerHeight;
-        diceCanvas.width  = Math.floor(16*diceCanvas.height/9);
-        textCanvas.width  = window.innerWidth;
-        textCanvas.height = Math.floor(16*diceCanvas.width/9);
-        backgroundCanvas.height = window.innerHeight;
-        backgroundCanvas.width  = Math.floor(16*diceCanvas.height/9);
+        diceCanvas.width  = Math.floor(diceCanvas.height * 16 / 9);
     }
+
+    textCanvas.width  = diceCanvas.width;
+    textCanvas.height = diceCanvas.height;
+    backgroundCanvas.width  = diceCanvas.width;
+    backgroundCanvas.height = diceCanvas.height;
+
     diceSize = diceCanvas.width * diceSizeFactor;
     stampSize = diceCanvas.width * stampSizeFactor;
     drawSize = diceCanvas.width * drawSizeFactor;
@@ -218,7 +218,7 @@ function drawDiceOnCanvas(context, x, y, size, value) {
 function drawTextOnCanvas(context, x, y, text) {
     context.font = textSize + 'px Crimson Pro';
     context.fillStyle = lineColour;
-    context.fillText(text, x * diceCanvas.width, (y * diceCanvas.height));
+    context.fillText(text, x * diceCanvas.width, y * diceCanvas.height);
 };
 
 function commitText() {
