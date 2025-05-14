@@ -152,6 +152,7 @@ function preloadStampImages() {
 };
 
 function redrawStrokes(dataArray) {
+    clearDrawCanvas();
     dataArray.forEach((data) => {
         if (data.erase) {
             eraseOnCanvas(backgroundCtx, data.x, data.y, eraserSize);
@@ -161,7 +162,7 @@ function redrawStrokes(dataArray) {
     });
 };
 
-function redawStamps(dataArray) {
+function redrawStamps(dataArray) {
     clearStampCanvas();
     dataArray.forEach((data) => {
         drawStampOnCanvas(stampCtx, data.x, data.y, stampSize, data.value);
@@ -169,12 +170,14 @@ function redawStamps(dataArray) {
 };
 
 function redrawDice(dataArray) {
+    clearDiceCanvas();
     dataArray.forEach((data) => {
         drawDiceOnCanvas(diceCanvasCtx, data.x, data.y, diceSize, data.value);
     });
 };
 
 function redrawText(dataArray) {
+    clearTextCanvas();
     dataArray.forEach((data) => {
         drawTextOnCanvas(textCanvasCtx, data.x, data.y, data.text);
     });
@@ -806,7 +809,7 @@ socket.on("drawExistingCanvas", (data) => {
 });
 
 socket.on("drawExistingStamps", (data) => {
-    redawStamps(data);
+    redrawStamps(data);
 });
 
 socket.on("drawExistingDice", (data) => {

@@ -94,7 +94,7 @@ io.on("connection", (socket) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
         rooms[currentRoom].lastActivityTS = Date.now();
-        rooms[currentRoom].lastActivity = 'draw';
+        rooms[currentRoom].lastActivity.push('draw');
 
         drawData.lastX = drawData.lastX / drawData.canvasWidth;
         drawData.lastY = drawData.lastY / drawData.canvasHeight;
@@ -109,7 +109,7 @@ io.on("connection", (socket) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
         rooms[currentRoom].lastActivityTS = Date.now();
-        rooms[currentRoom].lastActivity = 'erase';
+        rooms[currentRoom].lastActivity.push('erase');
 
         eraseData.x = eraseData.x / eraseData.canvasWidth;
         eraseData.y = eraseData.y / eraseData.canvasHeight;
@@ -122,9 +122,9 @@ io.on("connection", (socket) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
         rooms[currentRoom].lastActivityTS = Date.now();
-        rooms[currentRoom].lastActivity = 'clearDice';
+        //rooms[currentRoom].lastActivity.push('clearDice');
         
-        rooms[currentRoom].diceHistory = [];
+        rooms[currentRoom].diceHistory = []; //TODO for undo...
         io.to(currentRoom).emit("clearDice");
     });
 
@@ -132,7 +132,7 @@ io.on("connection", (socket) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
         rooms[currentRoom].lastActivityTS = Date.now();
-        rooms[currentRoom].lastActivity = 'clearCanvas';
+        //rooms[currentRoom].lastActivity.push('clearCanvas');
         
         rooms[currentRoom].diceHistory = [];
         rooms[currentRoom].drawHistory = [];
@@ -146,11 +146,9 @@ io.on("connection", (socket) => {
         
         rooms[currentRoom].lastActivityTS = Date.now();
         //undoing and undo is a redo, would cause an infinite undo/redo loop
-        //keep is simple, no undoing an undo for now
-
-        //TODO
+        
         //Determine last action type
-        switch(rooms[currentRoom].lastActivity) {
+        switch(rooms[currentRoom].lastActivity.pop()) {
             case 'draw':
                 //remove last draw action from draw canvas cache
                 rooms[currentRoom].drawHistory.pop();
@@ -168,16 +166,19 @@ io.on("connection", (socket) => {
                 break;
             case 'clearDie':
                 //remove last clear action from dice canvas cache
-                rooms[currentRoom].diceHistory = [];
+                //hoooowwwwwww.......?
+                //TODO?
                 break;
             case 'clearCanvas':
                 //remove last clear action from proper canvas cache
                 //eeeeewwwwwwwwwww..... keep each clear in it's own special cache??
                 //TODO
                 break;
+            case 'dropDie':
             case 'moveDie':
                 //remove last move action from dice canvas cache
-                //TODO
+                //rooms[currentRoom].diceHistory.pop();
+                //io.to(currentRoom).emit("updateDice", rooms[currentRoom].diceHistory);
                 break;
             case 'commitText':
                 //remove last commit action from text canvas cache
@@ -216,7 +217,7 @@ io.on("connection", (socket) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
         rooms[currentRoom].lastActivityTS = Date.now();
-        rooms[currentRoom].lastActivity = 'moveDie';
+        //rooms[currentRoom].lastActivity.push('moveDie');
         
         const dieIndex = rooms[currentRoom].diceHistory.findIndex(die => die.id === moveData.id);
         if (dieIndex !== -1) {
@@ -239,7 +240,7 @@ io.on("connection", (socket) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
         rooms[currentRoom].lastActivityTS = Date.now();
-        rooms[currentRoom].lastActivity = 'commitText';
+        rooms[currentRoom].lastActivity.push('commitText');
         
         newText = {
             x: data.x / data.canvasWidth,
@@ -254,7 +255,7 @@ io.on("connection", (socket) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
         rooms[currentRoom].lastActivityTS = Date.now();
-        rooms[currentRoom].lastActivity = 'dropStamp';
+        rooms[currentRoom].lastActivity.push('dropStamp');
         
         newStamp = {
             x: data.x / data.canvasWidth,
@@ -270,7 +271,7 @@ io.on("connection", (socket) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
         rooms[currentRoom].lastActivityTS = Date.now();
-        rooms[currentRoom].lastActivity = 'dropDice';
+        //rooms[currentRoom].lastActivity.push('dropDice');
         
         let bCount = rooms[currentRoom].biomeCount;
         let lCount = rooms[currentRoom].landmarkCount;
