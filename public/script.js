@@ -11,6 +11,8 @@ const diceCanvas = document.getElementById("whiteboard");
 const diceCanvasCtx = diceCanvas.getContext("2d");
 const backgroundCanvas = document.getElementById("backgroundWhiteboard");
 const backgroundCtx = backgroundCanvas.getContext("2d");
+const stampCanvas = document.getElementById("stampWhiteboard");
+const stampCtx = stampCanvas.getContext("2d");
 const textCanvas = document.getElementById("textWhiteboard");
 const textCanvasCtx = textCanvas.getContext("2d");
 const canvasContainer = document.getElementById("canvas-container");
@@ -122,6 +124,8 @@ function resizeCanvas() {
     textCanvas.height = diceCanvas.height;
     backgroundCanvas.width  = diceCanvas.width;
     backgroundCanvas.height = diceCanvas.height;
+    stampCanvas.width  = diceCanvas.width;
+    stampCanvas.height = diceCanvas.height;
 
     diceSize = diceCanvas.width * diceSizeFactor;
     stampSize = diceCanvas.width * stampSizeFactor;
@@ -158,8 +162,9 @@ function redrawStrokes(dataArray) {
 };
 
 function redawStamps(dataArray) {
+    clearStampCanvas();
     dataArray.forEach((data) => {
-        drawStampOnCanvas(backgroundCtx, data.x, data.y, stampSize, data.value);
+        drawStampOnCanvas(stampCtx, data.x, data.y, stampSize, data.value);
     });
 };
 
@@ -445,6 +450,10 @@ document.getElementById("clearCanvas").addEventListener("click", () => {
     socket.emit("clearCanvas");
 });
 
+document.getElementById("undoAction").addEventListener("click", () => {
+    socket.emit("undoAction");
+});
+
 document.getElementById("clearDice").addEventListener("click", () => {
     socket.emit("clearDice");
 });
@@ -700,6 +709,22 @@ function handleTouchCancel() {
     mouseDown = false;
 };
 
+function clearDrawCanvas() {
+    backgroundCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+}
+
+function clearTextCanvas() {
+    textCanvasCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+}
+
+function clearDiceCanvas() {
+    diceCanvasCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+}
+
+function clearStampCanvas() {
+    stampCtx.clearRect(0, 0, stampCanvas.width, stampCanvas.height);
+}
+
 socket.on("dieClickResult", (diceData) => {
     if (diceData.die) {
         draggingDie = true;
@@ -735,7 +760,7 @@ socket.on("erase", (data) => {
 });
 
 socket.on("dropStamp", (stampData) => {
-    drawStampOnCanvas(backgroundCtx, stampData.x, stampData.y, stampSize, stampData.value);
+    drawStampOnCanvas(stampCtx, stampData.x, stampData.y, stampSize, stampData.value);
 });
 
 socket.on("dropDice", (data) => {
@@ -754,9 +779,14 @@ socket.on("writeText", (data) => {
 });
 
 socket.on("clearCanvas", () => {
-    backgroundCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
-    textCanvasCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
-    diceCanvasCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+    clearDrawCanvas();
+    clearTextCanvas();
+    clearDiceCanvas();
+    clearStampCanvas();
+});
+
+socket.on("undoAction", () => {
+    //@TODO
 });
 
 socket.on("clearDice", () => {
