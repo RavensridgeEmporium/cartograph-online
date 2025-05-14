@@ -277,9 +277,10 @@ function createTextInput(x, y) {
     textInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            commitText();
+            canvasContainer.removeChild(textInput);
         }
         if (e.key === 'Escape') {
+            textInput.innerText = '';
             canvasContainer.removeChild(textInput);
             textInput = null;
         }
