@@ -174,7 +174,7 @@ io.on("connection", (socket) => {
                 //eeeeewwwwwwwwwww..... keep each clear in it's own special cache??
                 //TODO
                 break;
-            case 'dropDie':
+            case 'dropDice':
             case 'moveDie':
                 //remove last move action from dice canvas cache
                 //rooms[currentRoom].diceHistory.pop();
