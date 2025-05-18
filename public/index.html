@@ -57,6 +57,10 @@
                 <span class="btn-icon">🚫</span>
                 <span class="btn-text">Clear All</span>
             </button>
+            <button id="undoAction" class="tool-btn">
+                <span class="btn-icon">↩</span>
+                <span class="btn-text">Undo</span>
+            </button>
         </div>
         <div class="toolbar-2">
             <div class="counter">
@@ -88,7 +92,8 @@
         <div class="canvas-container" id="canvas-container">
             <canvas id="backgroundWhiteboard" style="z-index: 1; position: relative"></canvas>
             <canvas id="textWhiteboard" style="z-index: 2; position: absolute"></canvas>
-            <canvas id="whiteboard" style="z-index: 3; position: absolute;"></canvas>
+            <canvas id="stampWhiteboard" style="z-index: 3; position: absolute;"></canvas>
+            <canvas id="whiteboard" style="z-index: 4; position: absolute;"></canvas>
             <div class="compass"></div>
         </div>
         
@@ -145,9 +150,10 @@
           <div class="help-section">
             <h3>Other Actions</h3>
             <ul>
-              <li><strong>🗑️ Clear Dice</strong> - Remove all dice from the canvas.</li>
-              <li><strong>🚫 Clear All</strong> - Clear the entire canvas.</li>
-              <li><strong>📥 Download Map</strong> - Save your map as an image.</li>
+            <li><strong>🗑️ Clear Dice</strong> - Remove all dice from the canvas.</li>
+            <li><strong>🚫 Clear All</strong> - Clear the entire canvas.</li>
+            <li><strong>📥 Download Map</strong> - Save your map as an image.</li>
+            <li><strong>↩ Undo</strong> - Undo the last action.</li>
             </ul>
           </div>
         </div>
