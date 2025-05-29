@@ -111,10 +111,13 @@ io.on("connection", (socket) => {
         rooms[currentRoom].lastActivityTS = Date.now();
         rooms[currentRoom].lastActivity.push('erase');
 
-        eraseData.x = eraseData.x / eraseData.canvasWidth;
-        eraseData.y = eraseData.y / eraseData.canvasHeight;
-
+        for (let i = 0; i < eraseData.strokeArray.length; i++) {
+            eraseData.strokeArray[i].x /= eraseData.canvasWidth;
+            eraseData.strokeArray[i].y /= eraseData.canvasHeight;
+        };
         rooms[currentRoom].drawHistory.push(eraseData);
+        // Once the clientside is properly erasing in realtime, we should ensure the strokes aren't redrawn for the erasing client - uncomment below
+        // socket.broadcast.to(currentRoom).emit("erase", eraseData);
         io.to(currentRoom).emit("erase", eraseData);
     });
 

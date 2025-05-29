@@ -54,6 +54,7 @@ let draggingText = false;
 let textBeingDragged = { id: null };
 let debugText = null;
 let strokeArray = [];
+let eraseStrokeArray = [];
 
 const diceImages = [
     "/dice_faces/face1.png",
@@ -163,7 +164,7 @@ function redrawStrokes(dataArray) {
     clearDrawCanvas();
     dataArray.forEach((data) => {
         if (data.erase) {
-            eraseOnCanvas(backgroundCtx, data.x, data.y, eraserSize);
+            eraseOnCanvas(backgroundCtx, data.strokeArray, eraserSize);
         } else {
             drawLineOnCanvas(backgroundCtx, data.strokeArray, lineColour, drawSize, data.dashed);
         }
@@ -191,7 +192,7 @@ function redrawText(dataArray) {
     });
 };
 
-function drawLineOnCanvas(context, strokeArray, color, size, dashed) {
+function drawLineOnCanvas(context, strokeDrawArray, color, size, dashed) {
 
     if (dashed) {
         context.setLineDash([10, 45]);
@@ -202,15 +203,17 @@ function drawLineOnCanvas(context, strokeArray, color, size, dashed) {
     context.lineCap = "round";
     context.strokeStyle = color;
     context.beginPath();
-    context.moveTo(strokeArray[0].x * diceCanvas.width, strokeArray[0].y * diceCanvas.height);
-    for (let i = 1; i < strokeArray.length; i++) {
-    context.lineTo(strokeArray[i].x * diceCanvas.width, strokeArray[i].y * diceCanvas.height);
+    context.moveTo(strokeDrawArray[0].x * diceCanvas.width, strokeDrawArray[0].y * diceCanvas.height);
+    for (let i = 1; i < strokeDrawArray.length; i++) {
+        context.lineTo(strokeDrawArray[i].x * diceCanvas.width, strokeDrawArray[i].y * diceCanvas.height);
     }
     context.stroke();
 };
 
-function eraseOnCanvas(context, x, y, size) {
-    context.clearRect((x * diceCanvas.width) - size / 2, (y * diceCanvas.height) - size / 2, size, size);
+function eraseOnCanvas(context, strokeEraseArray, size) {
+    for (let i = 1; i < strokeEraseArray.length; i++) {
+        context.clearRect((strokeEraseArray[i].x * diceCanvas.width) - size / 2, (strokeEraseArray[i].y * diceCanvas.height) - size / 2, size, size);
+    }
 };
 
 function drawStampOnCanvas(context, x, y, size, stampValue) {
@@ -582,7 +585,6 @@ diceCanvas.addEventListener("mousedown", (event) => {
                 drawing = true;
                 lastX = mousePos.x;
                 lastY = mousePos.y;
-                // strokeArray.push({lastX, lastY});
             }
         }
     });
@@ -593,7 +595,11 @@ diceCanvas.addEventListener("mouseup", () => {
     if(strokeArray.length > 0) {
         socket.emit("draw", { strokeArray: strokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, dashed: selectedDrawToolValue === 2 });
     };
+    if(eraseStrokeArray.length > 0) {
+        socket.emit("erase", { strokeArray: eraseStrokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, erase: true });
+    };
     strokeArray = [];
+    eraseStrokeArray = [];
 });
 
 diceCanvas.addEventListener("mouseleave", () => {
@@ -601,7 +607,11 @@ diceCanvas.addEventListener("mouseleave", () => {
     if(strokeArray.length > 0) {
         socket.emit("draw", { strokeArray: strokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, dashed: selectedDrawToolValue === 2 });
     };
+    if(eraseStrokeArray.length > 0) {
+        socket.emit("erase", { strokeArray: eraseStrokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, erase: true });
+    };
     strokeArray = [];
+    eraseStrokeArray = [];
 });
 
 diceCanvas.addEventListener("mousemove", (event) => {
@@ -611,11 +621,12 @@ diceCanvas.addEventListener("mousemove", (event) => {
     
     if (drawing) {
         if (currentTool === "eraser" && mouseDown) {
-            socket.emit("erase", { x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, erase: true });
+            eraseStrokeArray.push({x, y});
+            // I think something will need to go here to invoke realtime erasing clientside too
         } else if (currentTool === "pen" && mouseDown) {
             strokeArray.push({x, y});
-            drawLineOnCanvas(backgroundCtx, [{x: lastX, y: lastY}, {x: x, y: y}], lineColour, drawSize, selectedDrawToolValue === 2)
-            //socket.emit("draw", { lastX, lastY, x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, dashed: selectedDrawToolValue === 2 });
+            // need to be able to draw clientside in realtime. I thought the below would work but it does not:
+            // drawLineOnCanvas(backgroundCtx, [{x: lastX, y: lastY}, {x: x, y: y}], lineColour, drawSize, selectedDrawToolValue === 2)
         }
         lastX = x;
         lastY = y;
@@ -827,7 +838,7 @@ socket.on("draw", (data) => {
 });
 
 socket.on("erase", (data) => {
-    eraseOnCanvas(backgroundCtx, data.x, data.y, eraserSize);
+    eraseOnCanvas(backgroundCtx, data.strokeArray, eraserSize);
 });
 
 socket.on("dropStamp", (stampData) => {
