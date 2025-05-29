@@ -7,6 +7,7 @@ const diceModeCheckbox = document.getElementById("toggleDiceDrop");
 const stampModeCheckbox = document.getElementById("toggleStampMode");
 const textModeCheckbox = document.getElementById("toggleTextMode");
 const stampToolbar = document.getElementById("stamp-toolbar");
+const drawToolbar = document.getElementById("draw-toolbar");
 const diceCanvas = document.getElementById("whiteboard");
 const diceCanvasCtx = diceCanvas.getContext("2d");
 const backgroundCanvas = document.getElementById("backgroundWhiteboard");
@@ -44,6 +45,7 @@ let drawing = false;
 let lastX = 0, lastY = 0;
 let mouseDown = false;
 let selectedStampValue = 1;
+let selectedDrawToolValue = 1;
 let draggingDie = false;
 let dieBeingDragged = { id: null };
 let textInput = null;
@@ -51,6 +53,8 @@ let textPosition = { x: 0, y: 0 };
 let draggingText = false;
 let textBeingDragged = { id: null };
 let debugText = null;
+let strokeArray = [];
+let eraseStrokeArray = [];
 
 const diceImages = [
     "/dice_faces/face1.png",
@@ -77,6 +81,11 @@ const stampImages = [
     "/assets/city.png",
     "/assets/discovery.png",
     "/assets/ruin.png"
+];
+
+const drawImages = [
+    "/assets/tool_images/stroke.png",
+    "/assets/tool_images/dashed.png"
 ];
 
 function biomeInc() {
@@ -155,9 +164,9 @@ function redrawStrokes(dataArray) {
     clearDrawCanvas();
     dataArray.forEach((data) => {
         if (data.erase) {
-            eraseOnCanvas(backgroundCtx, data.x, data.y, eraserSize);
+            eraseOnCanvas(backgroundCtx, data.strokeArray, eraserSize);
         } else {
-            drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize);
+            drawLineOnCanvas(backgroundCtx, data.strokeArray, lineColour, drawSize, data.dashed);
         }
     });
 };
@@ -183,18 +192,28 @@ function redrawText(dataArray) {
     });
 };
 
-function drawLineOnCanvas(context, x1, y1, x2, y2, color, size) {
+function drawLineOnCanvas(context, strokeDrawArray, color, size, dashed) {
+
+    if (dashed) {
+        context.setLineDash([10, 45]);
+    } else {
+        context.setLineDash([]);
+    }
     context.lineWidth = size;
     context.lineCap = "round";
     context.strokeStyle = color;
     context.beginPath();
-    context.moveTo(x1 * diceCanvas.width, y1 * diceCanvas.height);
-    context.lineTo(x2 * diceCanvas.width, y2 * diceCanvas.height);
+    context.moveTo(strokeDrawArray[0].x * diceCanvas.width, strokeDrawArray[0].y * diceCanvas.height);
+    for (let i = 1; i < strokeDrawArray.length; i++) {
+        context.lineTo(strokeDrawArray[i].x * diceCanvas.width, strokeDrawArray[i].y * diceCanvas.height);
+    }
     context.stroke();
 };
 
-function eraseOnCanvas(context, x, y, size) {
-    context.clearRect((x * diceCanvas.width) - size / 2, (y * diceCanvas.height) - size / 2, size, size);
+function eraseOnCanvas(context, strokeEraseArray, size) {
+    for (let i = 1; i < strokeEraseArray.length; i++) {
+        context.clearRect((strokeEraseArray[i].x * diceCanvas.width) - size / 2, (strokeEraseArray[i].y * diceCanvas.height) - size / 2, size, size);
+    }
 };
 
 function drawStampOnCanvas(context, x, y, size, stampValue) {
@@ -302,6 +321,14 @@ function highlightSelectedStamp() {
     });
 };
 
+function highlightSelectedDrawTool() {
+    const images = document.querySelectorAll("#draw-toolbar img");
+    images.forEach(img => {
+        img.classList.toggle("selected", parseInt(img.dataset.index) === selectedDrawToolValue);
+    });
+};
+
+
 function updateStampToolbar() {
     if (currentTool === "stamp") {
         stampToolbar.innerHTML = "";
@@ -324,6 +351,31 @@ function updateStampToolbar() {
         stampToolbar.classList.add("show");
     } else {
         stampToolbar.classList.remove("show");
+    }
+};
+
+function updateDrawToolbar() {
+    if (currentTool === "pen") {
+        drawToolbar.innerHTML = "";
+
+        drawImages.forEach((imgSrc, index) => {
+            const img = document.createElement("img");
+            img.src = imgSrc;
+            img.alt = `Stroke ${index + 1}`;
+            img.dataset.index = index + 1;
+
+            img.addEventListener("click", () => {
+              selectedDrawToolValue = index + 1;
+              highlightSelectedDrawTool();  
+            });
+
+            drawToolbar.appendChild(img);
+        });
+        highlightSelectedDrawTool();
+
+        drawToolbar.classList.add("show");
+    } else {
+        drawToolbar.classList.remove("show");
     }
 };
 
@@ -376,6 +428,7 @@ function initialise() {
     preloadDiceImages();
     preloadStampImages();
     updateStampToolbar();
+    updateDrawToolbar();
     toggleAllButtonsOff();
     socket.emit("redrawAll");
 };
@@ -393,6 +446,7 @@ drawModeCheckbox.addEventListener("change", () => {
         currentTool = "none";
     }
     updateStampToolbar();
+    updateDrawToolbar();
 });
 
 eraseModeCheckbox.addEventListener("change", () => {
@@ -406,6 +460,7 @@ eraseModeCheckbox.addEventListener("change", () => {
         currentTool = "none";
     }
     updateStampToolbar();
+    updateDrawToolbar();
 });
 
 diceModeCheckbox.addEventListener("change", () => {
@@ -420,6 +475,7 @@ diceModeCheckbox.addEventListener("change", () => {
         currentTool = "none";
     }
     updateStampToolbar();
+    updateDrawToolbar();
 });
 
 stampModeCheckbox.addEventListener("change", () => {
@@ -434,6 +490,7 @@ stampModeCheckbox.addEventListener("change", () => {
         currentTool = "none";
     }
     updateStampToolbar();
+    updateDrawToolbar();
 });
 
 textModeCheckbox.addEventListener("change", () => {
@@ -448,6 +505,7 @@ textModeCheckbox.addEventListener("change", () => {
         currentTool = "none";
     }
     updateStampToolbar();
+    updateDrawToolbar();
 });
 
 document.getElementById("clearCanvas").addEventListener("click", () => {
@@ -534,10 +592,26 @@ diceCanvas.addEventListener("mousedown", (event) => {
 
 diceCanvas.addEventListener("mouseup", () => {
     clearToolActions();
+    if(strokeArray.length > 0) {
+        socket.emit("draw", { strokeArray: strokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, dashed: selectedDrawToolValue === 2 });
+    };
+    if(eraseStrokeArray.length > 0) {
+        socket.emit("erase", { strokeArray: eraseStrokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, erase: true });
+    };
+    strokeArray = [];
+    eraseStrokeArray = [];
 });
 
 diceCanvas.addEventListener("mouseleave", () => {
     clearToolActions();
+    if(strokeArray.length > 0) {
+        socket.emit("draw", { strokeArray: strokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, dashed: selectedDrawToolValue === 2 });
+    };
+    if(eraseStrokeArray.length > 0) {
+        socket.emit("erase", { strokeArray: eraseStrokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, erase: true });
+    };
+    strokeArray = [];
+    eraseStrokeArray = [];
 });
 
 diceCanvas.addEventListener("mousemove", (event) => {
@@ -547,9 +621,12 @@ diceCanvas.addEventListener("mousemove", (event) => {
     
     if (drawing) {
         if (currentTool === "eraser" && mouseDown) {
-            socket.emit("erase", { x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, erase: true });
+            eraseStrokeArray.push({x, y});
+            // I think something will need to go here to invoke realtime erasing clientside too
         } else if (currentTool === "pen" && mouseDown) {
-            socket.emit("draw", { lastX, lastY, x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height });
+            strokeArray.push({x, y});
+            // need to be able to draw clientside in realtime. I thought the below would work but it does not:
+            // drawLineOnCanvas(backgroundCtx, [{x: lastX, y: lastY}, {x: x, y: y}], lineColour, drawSize, selectedDrawToolValue === 2)
         }
         lastX = x;
         lastY = y;
@@ -674,7 +751,8 @@ function handleTouchMove(event) {
                     x: touchPos.x, 
                     y: touchPos.y, 
                     canvasWidth: diceCanvas.width, 
-                    canvasHeight: diceCanvas.height 
+                    canvasHeight: diceCanvas.height,
+                    dashed: selectedDrawToolValue === 2 
                 });
             }
             lastX = touchPos.x;
@@ -755,12 +833,12 @@ socket.on("textClickResult", (textData) => {
 socket.off("textClickResult");
 socket.off("dieClickResult");
 
-socket.on("draw", (data) => {   
-    drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize);
+socket.on("draw", (data) => {
+    drawLineOnCanvas(backgroundCtx, data.strokeArray, lineColour, drawSize, data.dashed);
 });
 
 socket.on("erase", (data) => {
-    eraseOnCanvas(backgroundCtx, data.x, data.y, eraserSize);
+    eraseOnCanvas(backgroundCtx, data.strokeArray, eraserSize);
 });
 
 socket.on("dropStamp", (stampData) => {

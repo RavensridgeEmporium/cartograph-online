@@ -95,14 +95,14 @@ io.on("connection", (socket) => {
         
         rooms[currentRoom].lastActivityTS = Date.now();
         rooms[currentRoom].lastActivity.push('draw');
-
-        drawData.lastX = drawData.lastX / drawData.canvasWidth;
-        drawData.lastY = drawData.lastY / drawData.canvasHeight;
-        drawData.x = drawData.x / drawData.canvasWidth;
-        drawData.y = drawData.y / drawData.canvasHeight;
-
+        for (let i = 0; i < drawData.strokeArray.length; i++) {
+            drawData.strokeArray[i].x /= drawData.canvasWidth;
+            drawData.strokeArray[i].y /= drawData.canvasHeight;
+        };
         rooms[currentRoom].drawHistory.push(drawData);
         io.to(currentRoom).emit("draw", drawData);
+        // Once the clientside is properly drawing in realtime, we should ensure the strokes aren't redrawn for the drawing client - uncomment below
+        // socket.broadcast.to(currentRoom).emit("draw", drawData);
     });
 
     socket.on("erase", (eraseData) => {
@@ -111,10 +111,13 @@ io.on("connection", (socket) => {
         rooms[currentRoom].lastActivityTS = Date.now();
         rooms[currentRoom].lastActivity.push('erase');
 
-        eraseData.x = eraseData.x / eraseData.canvasWidth;
-        eraseData.y = eraseData.y / eraseData.canvasHeight;
-
+        for (let i = 0; i < eraseData.strokeArray.length; i++) {
+            eraseData.strokeArray[i].x /= eraseData.canvasWidth;
+            eraseData.strokeArray[i].y /= eraseData.canvasHeight;
+        };
         rooms[currentRoom].drawHistory.push(eraseData);
+        // Once the clientside is properly erasing in realtime, we should ensure the strokes aren't redrawn for the erasing client - uncomment below
+        // socket.broadcast.to(currentRoom).emit("erase", eraseData);
         io.to(currentRoom).emit("erase", eraseData);
     });
 
