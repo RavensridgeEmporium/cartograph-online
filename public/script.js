@@ -53,6 +53,7 @@ let textPosition = { x: 0, y: 0 };
 let draggingText = false;
 let textBeingDragged = { id: null };
 let debugText = null;
+let strokeArray = [];
 
 const diceImages = [
     "/dice_faces/face1.png",
@@ -164,7 +165,7 @@ function redrawStrokes(dataArray) {
         if (data.erase) {
             eraseOnCanvas(backgroundCtx, data.x, data.y, eraserSize);
         } else {
-            drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize, data.dashed);
+            drawLineOnCanvas(backgroundCtx, data.strokeArray, lineColour, drawSize, data.dashed);
         }
     });
 };
@@ -190,7 +191,7 @@ function redrawText(dataArray) {
     });
 };
 
-function drawLineOnCanvas(context, x1, y1, x2, y2, color, size, dashed) {
+function drawLineOnCanvas(context, strokeArray, color, size, dashed) {
 
     if (dashed) {
         context.setLineDash([10, 45]);
@@ -201,8 +202,10 @@ function drawLineOnCanvas(context, x1, y1, x2, y2, color, size, dashed) {
     context.lineCap = "round";
     context.strokeStyle = color;
     context.beginPath();
-    context.moveTo(x1 * diceCanvas.width, y1 * diceCanvas.height);
-    context.lineTo(x2 * diceCanvas.width, y2 * diceCanvas.height);
+    context.moveTo(strokeArray[0].x * diceCanvas.width, strokeArray[0].y * diceCanvas.height);
+    for (let i = 1; i < strokeArray.length; i++) {
+    context.lineTo(strokeArray[i].x * diceCanvas.width, strokeArray[i].y * diceCanvas.height);
+    }
     context.stroke();
 };
 
@@ -579,6 +582,7 @@ diceCanvas.addEventListener("mousedown", (event) => {
                 drawing = true;
                 lastX = mousePos.x;
                 lastY = mousePos.y;
+                // strokeArray.push({lastX, lastY});
             }
         }
     });
@@ -586,10 +590,18 @@ diceCanvas.addEventListener("mousedown", (event) => {
 
 diceCanvas.addEventListener("mouseup", () => {
     clearToolActions();
+    if(strokeArray.length > 0) {
+        socket.emit("draw", { strokeArray: strokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, dashed: selectedDrawToolValue === 2 });
+    };
+    strokeArray = [];
 });
 
 diceCanvas.addEventListener("mouseleave", () => {
     clearToolActions();
+    if(strokeArray.length > 0) {
+        socket.emit("draw", { strokeArray: strokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, dashed: selectedDrawToolValue === 2 });
+    };
+    strokeArray = [];
 });
 
 diceCanvas.addEventListener("mousemove", (event) => {
@@ -601,7 +613,9 @@ diceCanvas.addEventListener("mousemove", (event) => {
         if (currentTool === "eraser" && mouseDown) {
             socket.emit("erase", { x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, erase: true });
         } else if (currentTool === "pen" && mouseDown) {
-            socket.emit("draw", { lastX, lastY, x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, dashed: selectedDrawToolValue === 2 });
+            strokeArray.push({x, y});
+            drawLineOnCanvas(backgroundCtx, [{x: lastX, y: lastY}, {x: x, y: y}], lineColour, drawSize, selectedDrawToolValue === 2)
+            //socket.emit("draw", { lastX, lastY, x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, dashed: selectedDrawToolValue === 2 });
         }
         lastX = x;
         lastY = y;
@@ -808,8 +822,8 @@ socket.on("textClickResult", (textData) => {
 socket.off("textClickResult");
 socket.off("dieClickResult");
 
-socket.on("draw", (data) => {   
-    drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize, data.dashed);
+socket.on("draw", (data) => {
+    drawLineOnCanvas(backgroundCtx, data.strokeArray, lineColour, drawSize, data.dashed);
 });
 
 socket.on("erase", (data) => {
