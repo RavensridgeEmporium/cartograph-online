@@ -7,6 +7,7 @@ const diceModeCheckbox = document.getElementById("toggleDiceDrop");
 const stampModeCheckbox = document.getElementById("toggleStampMode");
 const textModeCheckbox = document.getElementById("toggleTextMode");
 const stampToolbar = document.getElementById("stamp-toolbar");
+const drawToolbar = document.getElementById("draw-toolbar");
 const diceCanvas = document.getElementById("whiteboard");
 const diceCanvasCtx = diceCanvas.getContext("2d");
 const backgroundCanvas = document.getElementById("backgroundWhiteboard");
@@ -44,6 +45,7 @@ let drawing = false;
 let lastX = 0, lastY = 0;
 let mouseDown = false;
 let selectedStampValue = 1;
+let selectedDrawToolValue = 1;
 let draggingDie = false;
 let dieBeingDragged = { id: null };
 let textInput = null;
@@ -77,6 +79,11 @@ const stampImages = [
     "/assets/city.png",
     "/assets/discovery.png",
     "/assets/ruin.png"
+];
+
+const drawImages = [
+    "/assets/tool_images/stroke.png",
+    "/assets/tool_images/dashed.png"
 ];
 
 function biomeInc() {
@@ -157,7 +164,7 @@ function redrawStrokes(dataArray) {
         if (data.erase) {
             eraseOnCanvas(backgroundCtx, data.x, data.y, eraserSize);
         } else {
-            drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize);
+            drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize, data.dashed);
         }
     });
 };
@@ -183,7 +190,13 @@ function redrawText(dataArray) {
     });
 };
 
-function drawLineOnCanvas(context, x1, y1, x2, y2, color, size) {
+function drawLineOnCanvas(context, x1, y1, x2, y2, color, size, dashed) {
+
+    if (dashed) {
+        context.setLineDash([10, 45]);
+    } else {
+        context.setLineDash([]);
+    }
     context.lineWidth = size;
     context.lineCap = "round";
     context.strokeStyle = color;
@@ -302,6 +315,14 @@ function highlightSelectedStamp() {
     });
 };
 
+function highlightSelectedDrawTool() {
+    const images = document.querySelectorAll("#draw-toolbar img");
+    images.forEach(img => {
+        img.classList.toggle("selected", parseInt(img.dataset.index) === selectedDrawToolValue);
+    });
+};
+
+
 function updateStampToolbar() {
     if (currentTool === "stamp") {
         stampToolbar.innerHTML = "";
@@ -324,6 +345,31 @@ function updateStampToolbar() {
         stampToolbar.classList.add("show");
     } else {
         stampToolbar.classList.remove("show");
+    }
+};
+
+function updateDrawToolbar() {
+    if (currentTool === "pen") {
+        drawToolbar.innerHTML = "";
+
+        drawImages.forEach((imgSrc, index) => {
+            const img = document.createElement("img");
+            img.src = imgSrc;
+            img.alt = `Stroke ${index + 1}`;
+            img.dataset.index = index + 1;
+
+            img.addEventListener("click", () => {
+              selectedDrawToolValue = index + 1;
+              highlightSelectedDrawTool();  
+            });
+
+            drawToolbar.appendChild(img);
+        });
+        highlightSelectedDrawTool();
+
+        drawToolbar.classList.add("show");
+    } else {
+        drawToolbar.classList.remove("show");
     }
 };
 
@@ -376,6 +422,7 @@ function initialise() {
     preloadDiceImages();
     preloadStampImages();
     updateStampToolbar();
+    updateDrawToolbar();
     toggleAllButtonsOff();
     socket.emit("redrawAll");
 };
@@ -393,6 +440,7 @@ drawModeCheckbox.addEventListener("change", () => {
         currentTool = "none";
     }
     updateStampToolbar();
+    updateDrawToolbar();
 });
 
 eraseModeCheckbox.addEventListener("change", () => {
@@ -406,6 +454,7 @@ eraseModeCheckbox.addEventListener("change", () => {
         currentTool = "none";
     }
     updateStampToolbar();
+    updateDrawToolbar();
 });
 
 diceModeCheckbox.addEventListener("change", () => {
@@ -420,6 +469,7 @@ diceModeCheckbox.addEventListener("change", () => {
         currentTool = "none";
     }
     updateStampToolbar();
+    updateDrawToolbar();
 });
 
 stampModeCheckbox.addEventListener("change", () => {
@@ -434,6 +484,7 @@ stampModeCheckbox.addEventListener("change", () => {
         currentTool = "none";
     }
     updateStampToolbar();
+    updateDrawToolbar();
 });
 
 textModeCheckbox.addEventListener("change", () => {
@@ -448,6 +499,7 @@ textModeCheckbox.addEventListener("change", () => {
         currentTool = "none";
     }
     updateStampToolbar();
+    updateDrawToolbar();
 });
 
 document.getElementById("clearCanvas").addEventListener("click", () => {
@@ -549,7 +601,7 @@ diceCanvas.addEventListener("mousemove", (event) => {
         if (currentTool === "eraser" && mouseDown) {
             socket.emit("erase", { x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, erase: true });
         } else if (currentTool === "pen" && mouseDown) {
-            socket.emit("draw", { lastX, lastY, x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height });
+            socket.emit("draw", { lastX, lastY, x, y, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, dashed: selectedDrawToolValue === 2 });
         }
         lastX = x;
         lastY = y;
@@ -674,7 +726,8 @@ function handleTouchMove(event) {
                     x: touchPos.x, 
                     y: touchPos.y, 
                     canvasWidth: diceCanvas.width, 
-                    canvasHeight: diceCanvas.height 
+                    canvasHeight: diceCanvas.height,
+                    dashed: selectedDrawToolValue === 2 
                 });
             }
             lastX = touchPos.x;
@@ -756,7 +809,7 @@ socket.off("textClickResult");
 socket.off("dieClickResult");
 
 socket.on("draw", (data) => {   
-    drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize);
+    drawLineOnCanvas(backgroundCtx, data.lastX, data.lastY, data.x, data.y, lineColour, drawSize, data.dashed);
 });
 
 socket.on("erase", (data) => {

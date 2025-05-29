@@ -245,7 +245,7 @@ footer {
 
 /* Stamp Sidebar */
 
-#stamp-toolbar {
+#stamp-toolbar, #draw-toolbar {
     position: fixed;
     top: 105px; /* Below the top toolbar */
     left: 0;
@@ -267,7 +267,7 @@ footer {
     z-index: 3;
 }
 
-#stamp-toolbar img {
+#stamp-toolbar img, #draw-toolbar img {
     width: 60px; /* Adjust size as needed */
     height: auto;
     border-radius: 5px;
@@ -275,18 +275,18 @@ footer {
     padding: 5px;
 }
 
-#stamp-toolbar img:hover {
+#stamp-toolbar img:hover, #draw-toolbar img:hover {
     cursor: pointer;
     transform: scale(1.1);
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
 
 /* Visible state */
-#stamp-toolbar.show {
+#stamp-toolbar.show, #draw-toolbar.show {
     transform: translateX(0); /* Slide in */
 }
 
-#stamp-toolbar img.selected {
+#stamp-toolbar img.selected, #draw-toolbar img.selected {
     filter:invert(1);
     background-color: #74baec;
     border: 2px solid #b5d3f0;
