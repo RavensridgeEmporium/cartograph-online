@@ -193,7 +193,6 @@ function redrawText(dataArray) {
 };
 
 function drawLineOnCanvas(context, strokeDrawArray, color, size, dashed) {
-
     if (dashed) {
         context.setLineDash([10, 45]);
     } else {
@@ -622,11 +621,10 @@ diceCanvas.addEventListener("mousemove", (event) => {
     if (drawing) {
         if (currentTool === "eraser" && mouseDown) {
             eraseStrokeArray.push({x, y});
-            // I think something will need to go here to invoke realtime erasing clientside too
+            socket.emit("client erase", { strokeArray: eraseStrokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, erase: true });
         } else if (currentTool === "pen" && mouseDown) {
             strokeArray.push({x, y});
-            // need to be able to draw clientside in realtime. I thought the below would work but it does not:
-            // drawLineOnCanvas(backgroundCtx, [{x: lastX, y: lastY}, {x: x, y: y}], lineColour, drawSize, selectedDrawToolValue === 2)
+            socket.emit("client draw", { strokeArray: strokeArray, canvasWidth: diceCanvas.width, canvasHeight: diceCanvas.height, dashed: selectedDrawToolValue === 2 });
         }
         lastX = x;
         lastY = y;
@@ -837,7 +835,15 @@ socket.on("draw", (data) => {
     drawLineOnCanvas(backgroundCtx, data.strokeArray, lineColour, drawSize, data.dashed);
 });
 
+socket.on("client draw", (data) => {
+    drawLineOnCanvas(backgroundCtx, data.strokeArray, lineColour, drawSize, data.dashed);
+});
+
 socket.on("erase", (data) => {
+    eraseOnCanvas(backgroundCtx, data.strokeArray, eraserSize);
+});
+
+socket.on("client erase", (data) => {
     eraseOnCanvas(backgroundCtx, data.strokeArray, eraserSize);
 });
 
