@@ -100,9 +100,19 @@ io.on("connection", (socket) => {
             drawData.strokeArray[i].y /= drawData.canvasHeight;
         };
         rooms[currentRoom].drawHistory.push(drawData);
-        io.to(currentRoom).emit("draw", drawData);
-        // Once the clientside is properly drawing in realtime, we should ensure the strokes aren't redrawn for the drawing client - uncomment below
-        // socket.broadcast.to(currentRoom).emit("draw", drawData);
+        socket.broadcast.to(currentRoom).emit("draw", drawData);
+    });
+
+    socket.on("client draw", (drawData) => {
+        if (!currentRoom || !rooms[currentRoom]) return;
+        
+        rooms[currentRoom].lastActivityTS = Date.now();
+        rooms[currentRoom].lastActivity.push('draw');
+        for (let i = 0; i < drawData.strokeArray.length; i++) {
+            drawData.strokeArray[i].x /= drawData.canvasWidth;
+            drawData.strokeArray[i].y /= drawData.canvasHeight;
+        };
+        socket.emit("client draw", drawData);
     });
 
     socket.on("erase", (eraseData) => {
@@ -110,15 +120,24 @@ io.on("connection", (socket) => {
         
         rooms[currentRoom].lastActivityTS = Date.now();
         rooms[currentRoom].lastActivity.push('erase');
-
         for (let i = 0; i < eraseData.strokeArray.length; i++) {
             eraseData.strokeArray[i].x /= eraseData.canvasWidth;
             eraseData.strokeArray[i].y /= eraseData.canvasHeight;
         };
         rooms[currentRoom].drawHistory.push(eraseData);
-        // Once the clientside is properly erasing in realtime, we should ensure the strokes aren't redrawn for the erasing client - uncomment below
-        // socket.broadcast.to(currentRoom).emit("erase", eraseData);
-        io.to(currentRoom).emit("erase", eraseData);
+        socket.broadcast.to(currentRoom).emit("erase", eraseData);
+    });
+
+    socket.on("client erase", (eraseData) => {
+        if (!currentRoom || !rooms[currentRoom]) return;
+        
+        rooms[currentRoom].lastActivityTS = Date.now();
+        rooms[currentRoom].lastActivity.push('erase');
+        for (let i = 0; i < eraseData.strokeArray.length; i++) {
+            eraseData.strokeArray[i].x /= eraseData.canvasWidth;
+            eraseData.strokeArray[i].y /= eraseData.canvasHeight;
+        };
+        socket.emit("client erase", eraseData);
     });
 
     socket.on("clearDice", () => {
@@ -155,17 +174,17 @@ io.on("connection", (socket) => {
             case 'draw':
                 //remove last draw action from draw canvas cache
                 rooms[currentRoom].drawHistory.pop();
-                socket.emit("drawExistingCanvas", rooms[currentRoom].drawHistory);
+                io.to(currentRoom).emit("drawExistingCanvas", rooms[currentRoom].drawHistory);
                 break;
             case 'erase':
                 //remove last erase action from draw canvas cache
                 rooms[currentRoom].drawHistory.pop();
-                socket.emit("drawExistingCanvas", rooms[currentRoom].drawHistory);
+                io.to(currentRoom).emit("drawExistingCanvas", rooms[currentRoom].drawHistory);
                 break;
             case 'dropStamp':
                 //remove last drop action from stamp canvas cache
                 rooms[currentRoom].stampHistory.pop();
-                socket.emit("drawExistingStamps", rooms[currentRoom].stampHistory);
+                io.to(currentRoom).emit("drawExistingStamps", rooms[currentRoom].stampHistory);
                 break;
             case 'clearDie':
                 //remove last clear action from dice canvas cache
@@ -186,7 +205,7 @@ io.on("connection", (socket) => {
             case 'commitText':
                 //remove last commit action from text canvas cache
                 rooms[currentRoom].textHistory.pop();
-                socket.emit("drawExistingText", rooms[currentRoom].textHistory);
+                io.to(currentRoom).emit("drawExistingText", rooms[currentRoom].textHistory);
                 break;
             }
 
