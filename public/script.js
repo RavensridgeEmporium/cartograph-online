@@ -261,7 +261,9 @@ function commitText() {
             canvasHeight: diceCanvas.height
         });
     }
-    canvasContainer.removeChild(textInput);
+    if (textInput.parentNode === canvasContainer) {
+        canvasContainer.removeChild(textInput);
+    }
     textInput = null;
 };
 
@@ -292,14 +294,21 @@ function createTextInput(x, y) {
       }, 0);
 
     textInput.addEventListener('blur', commitText);
+
     textInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            canvasContainer.removeChild(textInput);
+            commitText();
+            if (textInput && textInput.parentNode === canvasContainer) {
+                canvasContainer.removeChild(textInput);
+            }
+            textInput = null;
         }
         if (e.key === 'Escape') {
             textInput.innerText = '';
-            canvasContainer.removeChild(textInput);
+            if (textInput.parentNode === canvasContainer) {
+                canvasContainer.removeChild(textInput);
+            }
             textInput = null;
         }
     });
