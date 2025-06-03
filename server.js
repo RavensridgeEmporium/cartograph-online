@@ -95,10 +95,12 @@ io.on("connection", (socket) => {
         
         rooms[currentRoom].lastActivityTS = Date.now();
         rooms[currentRoom].lastActivity.push('draw');
-        for (let i = 0; i < drawData.strokeArray.length; i++) {
-            drawData.strokeArray[i].x /= drawData.canvasWidth;
-            drawData.strokeArray[i].y /= drawData.canvasHeight;
-        };
+        if (drawData.strokeArray) {
+            for (let i = 0; i < drawData.strokeArray.length; i++) {
+                drawData.strokeArray[i].x /= drawData.canvasWidth;
+                drawData.strokeArray[i].y /= drawData.canvasHeight;
+            }
+        }
         rooms[currentRoom].drawHistory.push(drawData);
         socket.broadcast.to(currentRoom).emit("draw", drawData);
     });
@@ -108,10 +110,13 @@ io.on("connection", (socket) => {
         
         rooms[currentRoom].lastActivityTS = Date.now();
         rooms[currentRoom].lastActivity.push('draw');
-        for (let i = 0; i < drawData.strokeArray.length; i++) {
-            drawData.strokeArray[i].x /= drawData.canvasWidth;
-            drawData.strokeArray[i].y /= drawData.canvasHeight;
-        };
+
+        if (drawData.strokeArray) {
+            for (let i = 0; i < drawData.strokeArray.length; i++) {
+                drawData.strokeArray[i].x /= drawData.canvasWidth;
+                drawData.strokeArray[i].y /= drawData.canvasHeight;
+            }
+        }
         socket.emit("client draw", drawData);
     });
 
@@ -120,10 +125,13 @@ io.on("connection", (socket) => {
         
         rooms[currentRoom].lastActivityTS = Date.now();
         rooms[currentRoom].lastActivity.push('erase');
-        for (let i = 0; i < eraseData.strokeArray.length; i++) {
-            eraseData.strokeArray[i].x /= eraseData.canvasWidth;
-            eraseData.strokeArray[i].y /= eraseData.canvasHeight;
-        };
+
+        if (eraseData.strokeArray) {
+            for (let i = 0; i < eraseData.strokeArray.length; i++) {
+                eraseData.strokeArray[i].x /= eraseData.canvasWidth;
+                eraseData.strokeArray[i].y /= eraseData.canvasHeight;
+            }
+        }
         rooms[currentRoom].drawHistory.push(eraseData);
         socket.broadcast.to(currentRoom).emit("erase", eraseData);
     });
@@ -133,10 +141,13 @@ io.on("connection", (socket) => {
         
         rooms[currentRoom].lastActivityTS = Date.now();
         rooms[currentRoom].lastActivity.push('erase');
-        for (let i = 0; i < eraseData.strokeArray.length; i++) {
-            eraseData.strokeArray[i].x /= eraseData.canvasWidth;
-            eraseData.strokeArray[i].y /= eraseData.canvasHeight;
-        };
+
+        if (eraseData.strokeArray) {
+            for (let i = 0; i < eraseData.strokeArray.length; i++) {
+                eraseData.strokeArray[i].x /= eraseData.canvasWidth;
+                eraseData.strokeArray[i].y /= eraseData.canvasHeight;
+            }
+        }
         socket.emit("client erase", eraseData);
     });
 

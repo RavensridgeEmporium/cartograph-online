@@ -1,4 +1,5 @@
 - [ ] Allow text to be dragged on mouse click
-- [ ] Undo functionality
-- [ ] Draw tool option to draw a dashed line rather than a solid line
+- [ ] Finish undo functionality
+- [ ] Redo functionality
+- [ ] Export and import editable map (save server data as a json or something?)
 - [ ] Scrollable map with a grab tool
